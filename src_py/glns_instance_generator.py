@@ -131,3 +131,10 @@ def generate_glns_instance(wh_type, products):
     out.write("EOF" + "\n")
     out.close()
     print()
+
+
+def get_reverse_index(i):
+    i = i - 51
+    time = i // 75
+    index = i % 75
+    return time, index

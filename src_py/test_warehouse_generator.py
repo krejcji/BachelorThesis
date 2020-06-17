@@ -124,6 +124,7 @@ def generate_items(warehouse_type: int):
            random.sample(c_class, k=len(c_class))
 
 
+# Assuming grid layout.
 def assign_items_into_storage(wh_type):
     dimensions = (STORAGE_COLUMNS[wh_type], ITEMS_IN_AISLE[wh_type], HEIGHT[wh_type])
     shelves = np.zeros(dimensions)
@@ -177,6 +178,7 @@ def verify_distribution(wh_type, shelves):
     print()
 
 
+# For each item, saves all locations of the item.
 def find_items(graph, max_items):
     positions = [None] * max_items
     for i in range(len(positions)):
@@ -192,7 +194,16 @@ def find_items(graph, max_items):
     return positions
 
 
+# Generates items, assigns them into storage, and generates full networkx graph according to wh_type specifications.
 def generate_warehouse_graph(wh_type):
+    """ Generates full Networkx graph.
+
+    Generates items, assigns the items into storage locations and generates graph according to wh_type specifications.
+    The graph includes cross aisles and depot.
+
+    :param wh_type: The warehouse type.
+    :return: Networkx graph.
+    """
     items = assign_items_into_storage(wh_type)
     graph = nx.Graph()
 
@@ -235,55 +246,52 @@ def generate_warehouse_graph(wh_type):
     return graph
 
 
+# Generates random set of orders
+def generate_order(wh_graph):
+    item_positions = find_items(wh_graph, 50000)
+    items = []
+
+    max_item_idx = np.max(np.where(item_positions))
+    order_size = random.randint(6, 12)
+
+    for i in range(order_size):
+        item_idx = random.randint(0, max_item_idx)
+        items.append(item_positions[item_idx])
+
+    return items
 
 
-def get_reverse_index(i):
-    i = i - 51
-    time = i // 75
-    index = i % 75
-    return time, index
-
-
-
-
-
-def generate_and_print_instance(wh_type, file_path):
+def generate_and_serialize_instance(wh_type, orders_count, file_path):
     graph = generate_warehouse_graph(wh_type)
     vertices = [vertex for vertex in graph.nodes]
+    orders = []
 
-    # Generate random sample of vertices
-    picking_vertices = random.sample(range(1, len(vertices)), pick_locations)
-    picking_vertices_classes = []
-
-    # Generate random picking locations and division into classes
-    step = 1 / classes
-    for vertex in picking_vertices:
-        rnd = random.random()
-        divider = step
-        i = 1
-        while True:
-            if rnd < divider:
-                picking_vertices_classes.append(i)
-                break
-            else:
-                divider += step
-                i += 1
+    for i in range(orders_count):
+        orders.append(generate_order(graph))
 
     file = io.open(file_path, "w+")
-    file.write(str(len(vertices)) + "\n")
-    file.write(str(len(picking_vertices) + 1) + "\n")
-    file.write(str(classes + 1) + "\n")
+    file.write("Test warehouse instance of type " + str(wh_type) + "\n")
+    file.write("Vertices: " + str(len(vertices)) + "\n")
 
     for i, vertex in enumerate(vertices):
-        line = ""
-        for j, vertex_2 in enumerate(vertices):
-            line += str(nx.algorithms.shortest_path_length(graph, vertex, vertex_2)) + " "
-        file.write(line + "\n")
-    file.write("0 0\n")
+        file.write(str(i) + " " + vertex + " " + graph.nodes[vertex]["type"] + "\n")
+        if graph.nodes[vertex]["type"] == "Shelf node":
+            file.write(str(graph.nodes[vertex]["left"].astype(int)) + "\n")
+            file.write(str(graph.nodes[vertex]["right"].astype(int)) + "\n")
 
-    for i in range(len(picking_vertices)):
-        file.write(str(picking_vertices[i]) + " " + str(picking_vertices_classes[i]) + "\n")
+    file.write("Edges:\n")
+
+    for edge in graph.edges:
+        file.write(str(edge) + " ")
+
+    file.write("Orders:\n")
+    for i in range(orders_count):
+        file.write("Order number " + str(i) + ", items: " + str(len(orders[i])) + "\n")
+        for items in orders[i]:
+            file.write(str(items) + "\n")
+
     file.close()
+    print()
 
-#generate_gtsp_instance(1, 50, 10, "../data/gtsp_instance.txt")
-# generate_gtsp_instance(0, [1, 10, 100, 250, 300])
+
+generate_and_serialize_instance(0, 5, "../data/whole_instance.txt")
