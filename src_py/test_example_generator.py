@@ -360,91 +360,82 @@ def generate_warehouse_graph(wh_type):
     return graph
 
 
-def generate_dag(wh_type, pick_locations, classes, time_steps):
+def generate_gtsp_instance(wh_type, pick_locations, classes, file_path):
     graph = generate_warehouse_graph(wh_type)
     vertices = [vertex for vertex in graph.nodes]
-    picking_vertices = random.sample(range(1, len(vertices)), pick_locations)
-    vertices_by_class_str = [None] * classes
-    vertices_by_class_idx = [None] * classes
 
-    # Generate random sample of picking locations and division into classes
-    for i in range(classes):
-        vertices_by_class_str[i] = []
-        vertices_by_class_idx[i] = []
+    # Generate random sample of vertices
+    picking_vertices = random.sample(range(1, len(vertices)), pick_locations)
+    picking_vertices_classes = []
+
+    # Generate random picking locations and division into classes
     step = 1 / classes
     for vertex in picking_vertices:
         rnd = random.random()
         divider = step
-        i = 0
+        i = 1
         while True:
             if rnd < divider:
-                vertices_by_class_str[i].append(vertices[vertex])
-                vertices_by_class_idx[i].append(vertex)
+                picking_vertices_classes.append(i)
                 break
             else:
                 divider += step
                 i += 1
 
-    pick_locations_list = ["x0y0"]
-    for clas in vertices_by_class_str:
-        for vertex in clas:
-            pick_locations_list.append(vertex)
+    file = io.open(file_path, "w+")
+    file.write(str(len(vertices)) + "\n")
+    file.write(str(len(picking_vertices)+1) + "\n")
+    file.write(str(classes+1) + "\n")
 
-    shortest_distances = np.zeros((len(pick_locations_list), len(pick_locations_list)))
-    # Prepare the distance matrix
-    for i, vertex in enumerate(pick_locations_list):
-        for j, vertex_2 in enumerate(pick_locations_list):
-            shortest_distances[i, j] = nx.algorithms.shortest_path_length(graph, vertex, vertex_2)
+    for i, vertex in enumerate(vertices):
+        line = ""
+        for j, vertex_2 in enumerate(vertices):
+            line += str(nx.algorithms.shortest_path_length(graph, vertex, vertex_2)) + " "
+        file.write(line + "\n")
+    file.write("0 0\n")
 
-    distances = np.zeros((pick_locations+1, time_steps))
-    non_zero_ctr = 1
-    # Fill in the initial distance
-    distances[0, 0] = 1
+    for i in range(len(picking_vertices)):
+        file.write(str(picking_vertices[i]) + " " + str(picking_vertices_classes[i]) + "\n")
+    file.close()
 
-    dist_sets = [None] * (pick_locations+1)
-    for s in range(len(dist_sets)):
-        dist_sets[s] = [None] * time_steps
-        for ss in range(len(dist_sets[s])):
-            dist_sets[s][ss] = []
 
-    class_list = []
-    j = 1
-    class_list.append(0)
-    for clas in range(len(vertices_by_class_idx)):
-        for vertex in vertices_by_class_idx[clas]:
-            class_list.append(j)
-        j += 1
+def generate_and_print_instance(wh_type, file_path):
+    graph = generate_warehouse_graph(wh_type)
+    vertices = [vertex for vertex in graph.nodes]
 
-    # By the use of dynamic programming, fill in the distance graph.
-    for time in range(130):
-        for vertex in range(len(pick_locations_list)):
-            if distances[vertex, time] != 0:
-                for vertex_target in range(len(pick_locations_list)):
-                    if vertex != vertex_target:
-                        vertex_class = class_list[vertex]
-                        vertex_target_class = class_list[vertex_target]
-                        if vertex_class == vertex_target_class:
-                            continue
-                        distance = int(shortest_distances[vertex, vertex_target]) + 20
-                        #random.randint(1, 15) + \
-                        if time+distance < time_steps:
-                            distances[vertex_target, time+distance] = 1
-                            non_zero_ctr += 1
-                            if vertex != 0:
-                                if len(dist_sets[vertex][time]):
-                                    for sett in dist_sets[vertex][time]:
-                                        new_set = set()
-                                        for item in sett:
-                                            new_set.add(item)
-                                        new_set.add(vertex_class)
-                                        dist_sets[vertex_target][time+distance].append(new_set)
-                                else:
-                                    new_set = set()
-                                    new_set.add(vertex_class)
-                                    dist_sets[vertex_target][time + distance].append(new_set)
+    # Generate random sample of vertices
+    picking_vertices = random.sample(range(1, len(vertices)), pick_locations)
+    picking_vertices_classes = []
 
-    print()
-# 14 sec with distances search
+    # Generate random picking locations and division into classes
+    step = 1 / classes
+    for vertex in picking_vertices:
+        rnd = random.random()
+        divider = step
+        i = 1
+        while True:
+            if rnd < divider:
+                picking_vertices_classes.append(i)
+                break
+            else:
+                divider += step
+                i += 1
 
-generate_dag(1, 50, 10, 1000)
+    file = io.open(file_path, "w+")
+    file.write(str(len(vertices)) + "\n")
+    file.write(str(len(picking_vertices) + 1) + "\n")
+    file.write(str(classes + 1) + "\n")
+
+    for i, vertex in enumerate(vertices):
+        line = ""
+        for j, vertex_2 in enumerate(vertices):
+            line += str(nx.algorithms.shortest_path_length(graph, vertex, vertex_2)) + " "
+        file.write(line + "\n")
+    file.write("0 0\n")
+
+    for i in range(len(picking_vertices)):
+        file.write(str(picking_vertices[i]) + " " + str(picking_vertices_classes[i]) + "\n")
+    file.close()
+
+#generate_gtsp_instance(1, 50, 10, "../data/gtsp_instance.txt")
 # generate_gtsp_instance(0, [1, 10, 100, 250, 300])
