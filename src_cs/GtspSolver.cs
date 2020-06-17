@@ -240,35 +240,7 @@ namespace src_cs {
             }
         }
 
-        public void FindShortestRoute() {
-            for (int i = 0; i < 10; i++) {
-                ulong[] test = new ulong[1024];
-                ulong[] test2 = new ulong[1024];
-                so.CreateSet(test, 10);
-                so.AddElement(test, 7);
-                so.AddElement(test, 8);
-                so.AddElement(test, 4);
-                so.AddElement(test, 5);
-                so.AddElement(test, 2);
-                so.FilterElement(test, 2);
-                so.AddElement(test, 5);
-                so.CreateSet(test, 1);
-                so.AddElement(test, 9);
-                so.AddElement(test, 7);
-                so.AddElement(test, 10);
-                test2[0] = 1;
-                so.AddElement(test2, 2);
-                so.AddElement(test2, 3);
-                so.AddElement(test2, 4);
-                so.AddElement(test2, 5);
-                so.AddElement(test2, 6);
-                so.AddElement(test2, 8);
-                so.FilterElement(test2, 10);
-                so.Unify(test, test2);
-                bool res = so.SearchSubset(test2, new int[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 });
-                bool res1 = so.SearchSubset(test2, new int[] { 2, 3, 4, 5, 6, 8 });
-                bool res2 = so.SearchSubset(test2, new int[] { 1, 7, 10, 9 });
-            }
+        public void FindShortestRoute() {            
             // Init sets
             ulong[] emptyLong = new ulong[1024];
             for (int i = 0; i < instance.tourVertices.Length; i++) {
