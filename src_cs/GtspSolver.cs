@@ -4,7 +4,7 @@ using System.Diagnostics;
 using System.IO;
 
 namespace src_cs {
-    class SetOperators {
+    class SetOperations {
         static readonly int MAXSIZE = 1024;
         static readonly int[] shifts = new int[] { 0, 1, 2, 4, 8, 16, 32, 1, 2, 4, 8, 16, 32, 64, 128, 256, 512 };
         static readonly ulong[] zeros = new ulong[MAXSIZE];
@@ -16,7 +16,7 @@ namespace src_cs {
         public readonly IsCompleteDel IsComplete;
 
 
-        static SetOperators() {
+        static SetOperations() {
             masks = new ulong[17][];
             for (int i = 0; i < 17; i++) {
                 masks[i] = new ulong[MAXSIZE];
@@ -62,7 +62,7 @@ namespace src_cs {
             */
         }
 
-        public SetOperators(int classesCount) {
+        public SetOperations(int classesCount) {
             this.classesCount = classesCount;
             if (classesCount < 7) {
                 this.longsUsed = 1;
@@ -210,7 +210,7 @@ namespace src_cs {
 
     class GTSPSolver {
         GTSPInstance instance;
-        SetOperators so;
+        SetOperations so;
         (int, int, int) bestSol;
         int[][] shortest_distances;
         ulong[][][] sets;
@@ -219,7 +219,7 @@ namespace src_cs {
 
         public GTSPSolver(string instancePath, int tMax) {
             instance = GTSPInstance.LoadFromFile(instancePath);
-            so = new SetOperators(instance.classesCount);
+            so = new SetOperations(instance.classesCount);
             this.timeLimit = tMax;
 
             // Allocate memory for subsets
@@ -321,17 +321,17 @@ namespace src_cs {
     }
 
 
-    class GtspSolver { /*
+    class GtspSolver {
         static void Main(string[] args) {
-            GTSPSolver solver = new GTSPSolver("../../../../../data/gtsp_instance.txt", 1000);
+            WarehouseInstance wi = InstanceParser.Parse("../../../../../data/whole_instance.txt");
             Stopwatch sw = new Stopwatch();
             sw.Start();
             for (int i = 0; i < 10; i++) {
-                solver.FindShortestRoute();
+                // solver.FindShortestRoute();
             }
             sw.Stop();
             Console.WriteLine("Elapsed={0}", sw.ElapsedMilliseconds);        
         }
-    */
+    
     }
 }

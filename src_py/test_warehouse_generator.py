@@ -272,6 +272,7 @@ def generate_and_serialize_instance(wh_type, orders_count, file_path):
     file = io.open(file_path, "w+")
     file.write("Test warehouse instance of type " + str(wh_type) + "\n")
     file.write("Vertices: " + str(len(vertices)) + "\n")
+    file.write("Items per vertex: " + str(HEIGHT[wh_type]) + "\n")
 
     for i, vertex in enumerate(vertices):
         file.write(str(i) + " " + vertex + " " + graph.nodes[vertex]["type"] + "\n")
@@ -282,9 +283,10 @@ def generate_and_serialize_instance(wh_type, orders_count, file_path):
     file.write("Edges:\n")
 
     for edge in graph.edges:
-        file.write(str(edge) + " ")
+        file.write(edge[0] + "," + edge[1] + " ")
+    file.write("\n")
 
-    file.write("Orders:\n")
+    file.write("Orders: " + str(orders_count) + "\n")
     for i in range(orders_count):
         file.write("Order number " + str(i) + ", items: " + str(len(orders[i])) + "\n")
         for items in orders[i]:
