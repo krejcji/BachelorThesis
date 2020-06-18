@@ -212,34 +212,50 @@ def generate_warehouse_graph(wh_type):
 
     for cross_aisle in range(CROSS_AISLES[wh_type]):
         for aisle in range(AISLES[wh_type]):
-            # Add highway node into graph
-            node_index = "x" + str(aisle) + "y" + str(cross_aisle*ITEMS_IN_BLOCK[wh_type] + cross_aisle)
-            graph.add_node(node_index)
-            graph.nodes[node_index]["type"] = "Steiner node"
-            graph.nodes[node_index]["x"] = aisle
-            graph.nodes[node_index]["y"] = cross_aisle*ITEMS_IN_BLOCK[wh_type]
-            graph.nodes[node_index]["left"] = None
-            graph.nodes[node_index]["right"] = None
+            # Add 2 highway node into graph
+            node_index_x = aisle
+            node_index_y = cross_aisle*ITEMS_IN_BLOCK[wh_type] + (2 * cross_aisle)
+            node_index_0 = "x" + str(node_index_x) + "y" + str(node_index_y)
+            graph.add_node(node_index_0)
+            graph.nodes[node_index_0]["type"] = "Steiner node"
+            graph.nodes[node_index_0]["x"] = node_index_x
+            graph.nodes[node_index_0]["y"] = node_index_y
+            graph.nodes[node_index_0]["left"] = None
+            graph.nodes[node_index_0]["right"] = None
+
+            node_index_y += 1
+            node_index_1 = "x" + str(node_index_x) + "y" + str(node_index_y)
+            graph.add_node(node_index_1)
+            graph.nodes[node_index_1]["type"] = "Steiner node"
+            graph.nodes[node_index_1]["x"] = node_index_x
+            graph.nodes[node_index_1]["y"] = node_index_y
+            graph.nodes[node_index_1]["left"] = None
+            graph.nodes[node_index_1]["right"] = None
+
+            # Add vertical edge
+            graph.add_edge(node_index_0, node_index_1, weight="120")
 
             # Add edge connecting the vertex with the adjacent vertex to the left
             if aisle != 0:
-                prev_index = "x" + str(aisle-1) + "y" + str(cross_aisle*ITEMS_IN_BLOCK[wh_type] + cross_aisle)
-                graph.add_edge(prev_index, node_index, weight="240")
+                prev_index = "x" + str(aisle-1) + "y" + str(cross_aisle*ITEMS_IN_BLOCK[wh_type] + (2*cross_aisle))
+                graph.add_edge(prev_index, node_index_0, weight="240")
+                prev_index_1 = "x" + str(aisle - 1) + "y" + str(cross_aisle * ITEMS_IN_BLOCK[wh_type] + (2 * cross_aisle) + 1)
+                graph.add_edge(prev_index_1, node_index_1, weight="240")
 
     # Add all item vertices
     for aisle in range(AISLES[wh_type]):
         for position in range(ITEMS_IN_AISLE[wh_type]):
-            node_index = "x" + str(aisle) + "y" + str(position + (position // ITEMS_IN_BLOCK[wh_type]) + 1)
-            prev_index = "x" + str(aisle) + "y" + str(position + (position // ITEMS_IN_BLOCK[wh_type]))
+            node_index = "x" + str(aisle) + "y" + str(position + ((position // ITEMS_IN_BLOCK[wh_type])*2) + 2)
+            prev_index = "x" + str(aisle) + "y" + str(position + ((position // ITEMS_IN_BLOCK[wh_type])*2) + 1)
             graph.add_node(node_index)
             graph.nodes[node_index]["type"] = "Shelf node"
             graph.nodes[node_index]["x"] = aisle
-            graph.nodes[node_index]["y"] = position + (position // ITEMS_IN_BLOCK[wh_type]) + 1
+            graph.nodes[node_index]["y"] = position + ((position // ITEMS_IN_BLOCK[wh_type])*2) + 2
             graph.nodes[node_index]["left"] = items[2 * aisle, position]
             graph.nodes[node_index]["right"] = items[2 * aisle + 1, position]
             graph.add_edge(node_index, prev_index, weight="120")
             if (position + 1) % ITEMS_IN_BLOCK[wh_type] == 0:
-                next_index = "x" + str(aisle) + "y" + str(position + (position // ITEMS_IN_BLOCK[wh_type]) + 2)
+                next_index = "x" + str(aisle) + "y" + str(position + (position // ITEMS_IN_BLOCK[wh_type]*2) + 3)
                 graph.add_edge(next_index, node_index, weight="120")
     graph.add_edge("0", "x0y0", weight="0")
 
@@ -296,4 +312,4 @@ def generate_and_serialize_instance(wh_type, orders_count, file_path):
     print()
 
 
-generate_and_serialize_instance(0, 5, "../data/whole_instance.txt")
+generate_and_serialize_instance(1, 5, "../data/whole_instance.txt")
