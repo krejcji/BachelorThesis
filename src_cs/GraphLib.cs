@@ -1,7 +1,6 @@
 ﻿using Priority_Queue;
 using System;
 using System.Collections.Generic;
-using System.Text;
 
 namespace src_cs {
     public class Vertex {
@@ -45,9 +44,7 @@ namespace src_cs {
         private int[][][] routesCache;
         private AStarNode[] queueCacheA;
         private AStarNodeFactory nodeFactory;
-        private DijkstraNode[] queueCacheD;
         private FastPriorityQueue<AStarNode> aStarQueue;
-        private FastPriorityQueue<DijkstraNode> dijkstraQueue;
         public List<Vertex> vertices;
         public List<Edge> edges;
         public Order[] orders;
@@ -70,13 +67,8 @@ namespace src_cs {
 
         public void Initialize(Agent[] agents) {
             aStarQueue = new FastPriorityQueue<AStarNode>(vertices.Count);
-            dijkstraQueue = new FastPriorityQueue<DijkstraNode>(vertices.Count);
             nodeFactory = new AStarNodeFactory(vertices.Count * 3);
             queueCacheA = new AStarNode[vertices.Count];
-            queueCacheD = new DijkstraNode[vertices.Count];
-            for (int i = 0; i < queueCacheD.Length; i++) {
-                queueCacheD[i] = new DijkstraNode(i);
-            }
 
             // Init orders
             var tmpOrders = new List<Order>();
@@ -99,7 +91,25 @@ namespace src_cs {
 
 
             void InitTourRoutes() {
-                // For each order, calculate shortest routes.
+
+                HashSet<int> verticesUsed = new HashSet<int>();
+                // Init shortest distances for pick destinations
+                Queue<QueueNode> q = new Queue<QueueNode>(vertices.Count);
+                foreach (var order in orders) {
+                    for (int i = 0; i < order.vertices.Length; i++) {
+                        verticesUsed.Add(order.vertices[i]);
+                    }
+                }
+                foreach (var vertex in verticesUsed) {
+                    BFS(q, vertex);
+                }
+                foreach (var vertex in verticesUsed) {
+                    for (int i = 0; i < vertices.Count; i++) {
+                        distancesCache[i][vertex] = distancesCache[vertex][i];
+                    }
+                }
+
+                // For each order, calculate one shortest route.
                 foreach (var order in orders) {
                     var vertices = order.vertices;
 
@@ -107,23 +117,21 @@ namespace src_cs {
                     for (int j = 0; j < vertices.Length; j++) {
                         for (int k = 0; k < vertices.Length; k++) {
                             if (j < k) {
-                                if (distancesCache[vertices[j]][vertices[k]] == 0) {
-                                    Dijkstra(vertices[j], vertices[k]);
-                                    distancesCache[vertices[k]][vertices[j]] = 0;
-                                    Dijkstra(vertices[k], vertices[j]);
-                                }
-                                if (routesCache[vertices[j]][vertices[k]] != null)
-                                    continue;
+                                if (routesCache[vertices[j]][vertices[k]] != null) continue;
+
                                 var (distance, route) = AStar(vertices[j], vertices[k], null, 0, false);
                                 routesCache[vertices[j]][vertices[k]] = route;
-                                var (distance1, route1) = AStar(vertices[k], vertices[j], null, 0, false);
-                                routesCache[vertices[k]][vertices[j]] = route1;
+                                var reverseRoute = new int[route.Length];
+                                for (int i = 0; i < route.Length; i++) {
+                                    reverseRoute[route.Length - i - 1] = route[i];
+                                }
+                                routesCache[vertices[k]][vertices[j]] = reverseRoute;
                             }
                         }
                     }
                 }
             }
-        }       
+        }
 
         public int GetPickTime(int vertex, int position, int height) {
             var sVertex = vertices[vertex] as StorageVertex;
@@ -193,9 +201,6 @@ namespace src_cs {
                 var currNode = queue.Dequeue();
                 queueCacheA[currNode.index] = null;
                 var currRouteCost = currNode.routeCost;
-                if (Dijkstra(x,currNode.index) != currNode.routeCost) {
-                    throw new Exception();
-                }
 
                 // If goal node.
                 if (currNode.index == y) {
@@ -220,7 +225,7 @@ namespace src_cs {
                                 goto Neighbors;
                         }
                     }
-                    heuristicCost = currNode.routeCost + 1 + Dijkstra(currNode.index, y);
+                    heuristicCost = currNode.routeCost + 1 + distancesCache[currNode.index][y];
                     EnqueueNode(currNode.index, currRouteCost + 1, heuristicCost, currNode);
                 }
 
@@ -228,12 +233,11 @@ namespace src_cs {
                 // Add all neighbors into queue, if edge is not constrained.
                 foreach (var neighbor in vertices[currNode.index].edges) {
                     int neighborIdx = neighbor.x == currNode.index ? neighbor.y : neighbor.x;
-                    if (currNode.predecessor != null && neighborIdx == currNode.predecessor.index) 
+                    if (currNode.predecessor != null && neighborIdx == currNode.predecessor.index)
                         continue;
                     int transitionCost = neighbor.cost;
                     var neighborRouteCost = currNode.routeCost + transitionCost;
-                    int dijkstr = Dijkstra(neighborIdx, y);
-                    heuristicCost = neighborRouteCost + dijkstr;
+                    heuristicCost = neighborRouteCost + distancesCache[neighborIdx][y];
 
                     // Check if constraints are not violated.
                     targetOffsetTime = reverse == false ? beginTime + neighborRouteCost : beginTime - neighborRouteCost;
@@ -281,10 +285,6 @@ namespace src_cs {
             public int routeCost;
             public AStarNode predecessor;
 
-            public AStarNode() {
-
-            }
-
             public void InitNode(int index, int cost, AStarNode predecessor) {
                 this.routeCost = cost;
                 this.predecessor = predecessor;
@@ -293,8 +293,8 @@ namespace src_cs {
         }
 
         public class AStarNodeFactory {
-            readonly AStarNode[] cache;
-            int index = 0;
+            private readonly AStarNode[] cache;
+            private int index = 0;
             public AStarNodeFactory(int capacity) {
                 cache = new AStarNode[capacity];
                 for (int i = 0; i < capacity; i++) {
@@ -320,91 +320,33 @@ namespace src_cs {
             }
         }
 
-        public int Dijkstra(int x, int y) {
-            if (distancesCache[x][y] != 0) {
-                return distancesCache[x][y];
-            }
-            else if (x == y) {
-                return 0;
-            }
-            var queue = dijkstraQueue;
-            var firstNode = GetNode(x, 0, -1);
-            queue.Enqueue(firstNode, 0);
+        void BFS(Queue<QueueNode> queue, int source) {
+            queue.Enqueue(new QueueNode(source, 0));
 
-            while (queue.Count != 0) {
+            while (queue.Count > 0) {
                 var currNode = queue.Dequeue();
-                currNode.Deque();
-                var currRouteCost = currNode.routeCost;               
-                distancesCache[currNode.index][x] = currRouteCost;
-                distancesCache[x][currNode.index] = currRouteCost;
-                                  
-
-                // If goal node.
-                if (currNode.index == y) {
-                    distancesCache[x][y] = currRouteCost;
-                    CleanUpQueueCache();
-                    return currRouteCost;
-                }
+                int neighborDistance = currNode.distance + 1;
 
                 // Add all neighbors into queue, if edge is not constrained.
-                foreach (var neighbor in vertices[currNode.index].edges) {
-                    int neighborIdx = neighbor.x == currNode.index ? neighbor.y : neighbor.x;
-                    if (neighborIdx == currNode.predecessor) continue;                    
-                    int transitionCost = neighbor.cost;
-                    var neighborRouteCost = currNode.routeCost + transitionCost;
-                    if (distancesCache[x][neighborIdx] != 0 && distancesCache[x][neighborIdx] < neighborRouteCost) continue;
-                    EnqueueNode(neighborIdx, neighborRouteCost, currNode.index);
-                }
-            }
-            throw new ArgumentException("Shortest path not found, check the arguments.");
-
-            void EnqueueNode(int nodeIndex, int routeCost, int predecessor) {
-                DijkstraNode nextNode = queueCacheD[nodeIndex];
-                if (queueCacheD[nodeIndex].isEnqued) {               // update value if better cost                
-                    if (nextNode.routeCost > routeCost) {
-                        nextNode.routeCost = routeCost;
-                        nextNode.predecessor = predecessor;
-                        queue.UpdatePriority(nextNode, routeCost);
+                foreach (var neighbor in vertices[currNode.vertexId].edges) {
+                    int neighborIdx = neighbor.x == currNode.vertexId ? neighbor.y : neighbor.x;
+                    if (distancesCache[source][neighborIdx] == 0) {
+                        distancesCache[source][neighborIdx] = neighborDistance;
+                        queue.Enqueue(new QueueNode(neighborIdx, neighborDistance));
                     }
                 }
-                else {                                                // first visiting the vertex
-                    nextNode.InitNode(routeCost, predecessor);
-                    queue.Enqueue(nextNode, routeCost);
-                }
             }
-
-            void CleanUpQueueCache() {
-                while (queue.Count > 0) {
-                    var node = queue.Dequeue();
-                    node.Deque();
-                }
-            }
+            distancesCache[source][source] = 0;
         }
 
-        public class DijkstraNode : FastPriorityQueueNode {
-            public readonly int index;
-            public int predecessor;
-            public int routeCost;
-            public bool isEnqued;
+        struct QueueNode {
+            public int vertexId;
+            public int distance;
 
-            public DijkstraNode(int index) {
-                this.index = index;
-            }
-
-            public void InitNode(int cost, int predecessor) {
-                this.isEnqued = true;
-                this.routeCost = cost;
-                this.predecessor = predecessor;
-            }
-
-            public void Deque() {
-                isEnqued = false;
+            public QueueNode(int id, int distance) {
+                this.vertexId = id;
+                this.distance = distance;
             }
         }
-
-        DijkstraNode GetNode(int index, int cost, int predecessor) {
-            queueCacheD[index].InitNode(cost, predecessor);
-            return queueCacheD[index];
-        }        
     }
 }
