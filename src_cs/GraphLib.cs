@@ -66,8 +66,8 @@ namespace src_cs {
         }
 
         public void Initialize(Agent[] agents) {
-            aStarQueue = new FastPriorityQueue<AStarNode>(vertices.Count);
-            nodeFactory = new AStarNodeFactory(vertices.Count * 3);
+            aStarQueue = new FastPriorityQueue<AStarNode>(2 * vertices.Count);
+            nodeFactory = new AStarNodeFactory(vertices.Count);
             queueCacheA = new AStarNode[vertices.Count];
 
             // Init orders
@@ -91,7 +91,6 @@ namespace src_cs {
 
 
             void InitTourRoutes() {
-
                 HashSet<int> verticesUsed = new HashSet<int>();
                 // Init shortest distances for pick destinations
                 Queue<QueueNode> q = new Queue<QueueNode>(vertices.Count);
@@ -118,7 +117,6 @@ namespace src_cs {
                         for (int k = 0; k < vertices.Length; k++) {
                             if (j < k) {
                                 if (routesCache[vertices[j]][vertices[k]] != null) continue;
-
                                 var (distance, route) = AStar(vertices[j], vertices[k], null, 0, false);
                                 routesCache[vertices[j]][vertices[k]] = route;
                                 var reverseRoute = new int[route.Length];
@@ -153,49 +151,23 @@ namespace src_cs {
         /// <param name="reverse">Find backwards route if true.</param>
         /// <returns></returns>
         public (int, int[]) ShortestRoute(int x, int y, int offsetTime, SortedList<int, List<int>> constraints, bool reverse) {
-            // TODO : Binary search
-            if (!reverse) {
-                int maxTime = distancesCache[x][y] + offsetTime;
-                var route = routesCache[x][y];
-                if (distancesCache[x][y] == 0 || route == null) {
-                    return AStar(x, y, constraints, offsetTime, reverse);
-                }
-                for (int i = offsetTime; i <= maxTime; i++) {
-                    if (constraints.ContainsKey(i)) {
-                        for (int j = 0; j < constraints[i].Count; j++) {
-                            if (route[i - offsetTime] == constraints[i][j]) {
-                                return AStar(x, y, constraints, offsetTime, false);
-                            }
-                        }
+            int maxTime = reverse ? offsetTime : offsetTime + distancesCache[x][y];
+            int minTime = reverse ? offsetTime - distancesCache[x][y] : offsetTime;
+
+            if (constraints != null) {
+                foreach (var time in constraints.Keys) {
+                    if (time >= minTime || time <= maxTime) {
+                        return AStar(x, y, constraints, offsetTime, reverse);
                     }
                 }
             }
-            else {
-                int minTime = offsetTime - distancesCache[x][y];
-                if (distancesCache[x][y] > 0 && minTime < 0) {
-                    return (minTime, new int[0]);
-                }
-                var route = routesCache[x][y];
-                for (int i = offsetTime; i >= minTime; i--) {
-                    if (constraints.ContainsKey(i)) {
-                        for (int j = 0; j < constraints[i].Count; j++) {
-                            if (route[offsetTime - i] == constraints[i][j]) {
-                                return AStar(x, y, constraints, offsetTime, true);
-                            }
-                        }
-                    }
-                }
-            }
+
             return (distancesCache[x][y], routesCache[x][y]);
         }
 
         public (int, int[]) AStar(int x, int y, SortedList<int, List<int>> constraints, int beginTime, bool reverse) {
-            // TODO: Add time computation for vertex visit 
-            // TODO: Call dijkstra for heuristic costs
-
             var queue = aStarQueue;
-            var firstNode = nodeFactory.GetNode(x, 0, null);
-            queue.Enqueue(firstNode, 0);
+            EnqueueNode(x, 0, 0, null);
 
             while (queue.Count != 0) {
                 var currNode = queue.Dequeue();
@@ -214,59 +186,65 @@ namespace src_cs {
                     return (currRouteCost, result);
                 }
 
-                int heuristicCost = 0;
-                int targetOffsetTime = reverse == false ? beginTime + currNode.routeCost + 1 : beginTime - currNode.routeCost - 1;
+                int heuristicCost;
+                int neighborRouteCost = currNode.routeCost + 1;
+                int targetOffsetTime = 0;
 
                 // Stay at node for another time step, if not constrained
                 if (constraints != null) {
+                    targetOffsetTime = reverse == false ? beginTime + neighborRouteCost : beginTime - neighborRouteCost;
                     if (constraints.ContainsKey(targetOffsetTime)) {
                         foreach (var constraint in constraints[targetOffsetTime]) {
                             if (constraint == currNode.index)
                                 goto Neighbors;
                         }
                     }
-                    heuristicCost = currNode.routeCost + 1 + distancesCache[currNode.index][y];
-                    EnqueueNode(currNode.index, currRouteCost + 1, heuristicCost, currNode);
+                    heuristicCost = neighborRouteCost + distancesCache[currNode.index][y];
+                    EnqueueNode(currNode.index, neighborRouteCost, heuristicCost, currNode);
                 }
 
             Neighbors:
                 // Add all neighbors into queue, if edge is not constrained.
                 foreach (var neighbor in vertices[currNode.index].edges) {
                     int neighborIdx = neighbor.x == currNode.index ? neighbor.y : neighbor.x;
+
+                    // No return edges.
                     if (currNode.predecessor != null && neighborIdx == currNode.predecessor.index)
                         continue;
-                    int transitionCost = neighbor.cost;
-                    var neighborRouteCost = currNode.routeCost + transitionCost;
+
                     heuristicCost = neighborRouteCost + distancesCache[neighborIdx][y];
 
-                    // Check if constraints are not violated.
-                    targetOffsetTime = reverse == false ? beginTime + neighborRouteCost : beginTime - neighborRouteCost;
+                    // Check if constraints are not violated.                    
                     if (constraints != null && constraints.ContainsKey(targetOffsetTime)) {
-                        foreach (var value in constraints[targetOffsetTime]) {
-                            if (value == neighborIdx)
-                                goto Skip;
+                        foreach (var constrainedVertexIdx in constraints[targetOffsetTime]) {
+                            if (constrainedVertexIdx == neighborIdx)
+                                continue;
                         }
                     }
+
                     EnqueueNode(neighborIdx, neighborRouteCost, heuristicCost, currNode);
-                Skip:
-                    ;
                 }
             }
             throw new ArgumentException("Shortest path not found, check the arguments.");
 
             void EnqueueNode(int nodeIndex, int routeCost, int heuristicCost, AStarNode prevNode) {
                 AStarNode nextNode = queueCacheA[nodeIndex];
+
+                // newCost invariants - route with longer optimal length will always have higher newCost
+                //                    - of routes with the same optimal cost the one furthest from beginnig is preferred
+                float newCost = (heuristicCost << 10) + routeCost;
+
                 if (nextNode != null) {               // update value if better cost                
                     if (nextNode.routeCost > routeCost) {
                         nextNode.routeCost = routeCost;
                         nextNode.predecessor = prevNode;
-                        queue.UpdatePriority(nextNode, heuristicCost);
+                        queue.UpdatePriority(nextNode, newCost);
                     }
                 }
-                else {                                                // first visiting the vertex
+                else {                                // first visiting the vertex or requeue the current vertex
                     nextNode = nodeFactory.GetNode(nodeIndex, routeCost, prevNode);
                     queueCacheA[nodeIndex] = nextNode;
-                    queue.Enqueue(nextNode, heuristicCost);
+                    queue.Enqueue(nextNode, newCost);
                 }
             }
 
