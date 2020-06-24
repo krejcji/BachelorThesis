@@ -146,33 +146,63 @@ namespace src_cs {
         /// <summary>
         /// Finds shortest route between two picking locations.
         /// </summary>
-        /// <param name="x">Pick location x.</param>
-        /// <param name="y">Pick location y.</param>
-        /// <param name="offsetTime">Time at the source vertex.</param>
+        /// <param name="pickVertex">Pick location x.</param>
+        /// <param name="target">Pick location y.</param>
+        /// <param name="realTime">Time at the source vertex.</param>
         /// <param name="constraints"></param>
-        /// <param name="reverseTime">Find backwards route if true.</param>
+        /// <param name="reverseSearch">Find backwards route if true.</param>
         /// <returns></returns>
-        public (int, int[]) ShortestRoute(int x, int y, int offsetTime, SortedList<int, List<int>> constraints, bool reverseTime) {
-            int maxTime = reverseTime ? offsetTime : offsetTime + distancesCache[x][y];
-            int minTime = reverseTime ? offsetTime - distancesCache[x][y] : offsetTime;            
+        public (int, int[]) ShortestRoute(int pickVertex, int target, int itemId, int orderId, int realTime, SortedList<int, List<int>> constraints,
+            bool reverseSearch, bool returnPath) {
+            int pickTime = orders[orderId].pickTimes[itemId];            
+            int maxTime = reverseSearch ? realTime : realTime + pickTime + distancesCache[pickVertex][target];
+            int minTime = reverseSearch ? realTime - distancesCache[pickVertex][target] - pickTime : realTime;
+            (int, int[]) route = (distancesCache[pickVertex][target] + pickTime, routesCache[pickVertex][target]);
 
-            if (constraints != null && minTime>=0) {
-                var route = reverseTime ? routesCache[y][x] : routesCache[x][y];
-                // TODO: Benchmark iterating time vs iterating constraints or different data strucutre 
-                foreach (var time in constraints.Keys) {                    
+
+            if (constraints != null && minTime >= 0) {
+                foreach (var time in constraints.Keys) {
                     if (time >= minTime && time <= maxTime) {
                         int relativeTime = time - minTime;
                         for (int i = 0; i < constraints[time].Count; i++) {
-                            if (route[relativeTime] == constraints[time][i])
-                                return AStar(x, y, constraints, offsetTime, reverseTime);
+                            if (relativeTime < pickTime && pickVertex == constraints[time][i] ||
+                                (relativeTime >= pickTime && route.Item2[relativeTime-pickTime] == constraints[time][i])) {
+                                route = AStar(pickVertex, target, constraints, realTime + pickTime, reverseSearch);
+                                route.Item1 += pickTime;
+                                if (returnPath)
+                                    return (route.Item1 + pickTime, RouteWithPickVertices());
+                                else
+                                    return (route.Item1 + pickTime, null);
+                            }
                         }
                     }
                 }
             }
-            return (distancesCache[x][y], routesCache[x][y]);
+            if (!returnPath) {
+                return (distancesCache[pickVertex][target] + pickTime, null);
+            }
+            else {
+                return (distancesCache[pickVertex][target] + pickTime, RouteWithPickVertices());
+            }
+
+            int[] RouteWithPickVertices() {
+                var result = new int[route.Item2.Length + pickTime];
+                for (int i = 0; i < pickTime; i++) {
+                    result[i] = pickVertex;
+                }
+                for (int i = pickTime; i < route.Item2.Length+pickTime; i++) {
+                    result[i] = route.Item2[i - pickTime];
+                }
+                return result;
+            }
         }
 
-        public (int, int[]) AStar(int x, int y, SortedList<int, List<int>> constraints, int beginTime, bool reverseTime) {
+        public (int, int[]) AStar(int x, int y, SortedList<int, List<int>> constraints, int beginTime, bool reverseSearch) {
+            if (reverseSearch) {
+                var tmp = x;
+                x = y;
+                y = tmp;
+            }
             var queue = aStarQueue;
             EnqueueNode(x, 0, 0, null);
 
@@ -189,18 +219,20 @@ namespace src_cs {
                         currNode = currNode.predecessor;
                         result[i - 1] = currNode.index;
                     }
-                    CleanUpQueueCache();
+                    if (reverseSearch)
+                        ReverseRoute(result);
+                   CleanUpQueueCache();
                     return (currRouteCost, result);
                 }
 
                 int heuristicCost;
                 int neighborRouteCost = currNode.routeCost + 1;
                 int targetOffsetTime = 0;
-                
+
                 // Stay at node for another time step, if not constrained
                 //TODO: Only before a blocked vertex?
                 if (constraints != null) {
-                    targetOffsetTime = reverseTime == false ? beginTime + neighborRouteCost : beginTime - neighborRouteCost;
+                    targetOffsetTime = reverseSearch == false ? beginTime + neighborRouteCost : beginTime - neighborRouteCost;
                     if (constraints.ContainsKey(targetOffsetTime)) {
                         foreach (var constraint in constraints[targetOffsetTime]) {
                             if (constraint == currNode.index)
@@ -209,7 +241,7 @@ namespace src_cs {
                     }
                     heuristicCost = neighborRouteCost + distancesCache[currNode.index][y];
                     EnqueueNode(currNode.index, neighborRouteCost, heuristicCost, currNode);
-                }                
+                }
 
             Neighbors:
                 // Add all neighbors into queue, if edge is not constrained.
@@ -261,6 +293,15 @@ namespace src_cs {
                 queue.Clear();
                 Array.Copy(emptyArr, queueCacheA, queueCacheA.Length);
                 nodeFactory.ResetIndex();
+            }
+
+            static void ReverseRoute(int[] result) {
+                int tmp;
+                for (int i = 0; i < result.Length / 2; i++) {
+                    tmp = result[i];
+                    result[i] = result[result.Length - 1 - i];
+                    result[result.Length - 1 - i] = tmp;
+                }
             }
         }
 

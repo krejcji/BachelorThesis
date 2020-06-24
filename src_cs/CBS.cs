@@ -110,8 +110,9 @@ namespace src_cs {
                 for (int j = 0; j < instance.agents.Length; j++) {
                     int from = solutions[j][i];
                     int to = solutions[j][i + 1];
+                    if (from == to) continue;
                     if (nodesVisitors0[to].Count == 1 && nodesVisitors1[from].Count > 0) {
-                        var visitor0 = nodesVisitors0[to][0];
+                        var visitor0 = nodesVisitors0[to][0];                        
                         for (int k = 0; k < nodesVisitors1[from].Count; k++) {
                             if (visitor0 == nodesVisitors1[from][k]) {
                                 conflict = new Conflict(1, i, j,
@@ -202,6 +203,26 @@ namespace src_cs {
                     this.constraints[i] = pred.constraints[i];
                 }
                 else {
+#if DEBUG
+                    if (newConstraint.Length > 1) {
+                        for (int j = 0; j < newConstraint.Length; j++) {
+                            for (int k = 0; k < newConstraint.Length; k++) {
+                                if (j == k) continue;
+                                if (newConstraint[j].Equals(newConstraint[k])) {
+                                    throw new Exception("Duplicate new constraints.");
+                                }
+                            }
+                        }
+                    }
+                    if (constraints[i] != null) {
+                        for (int j = 0; j < constraints[i].Count; j++) {
+                            for (int k = 0; k < newConstraint.Length; k++) {
+                                if (constraints[i][j].Equals(newConstraint[k]))
+                                    throw new Exception("Adding existing constraint.");
+                            }
+                        }
+                    }
+#endif
                     this.constraints[i] = new List<Constraint>();
                     for (int j = 0; j < pred.constraints[i].Count; j++) {
                         this.constraints[i].Add(pred.constraints[i][j]);
@@ -222,12 +243,15 @@ namespace src_cs {
                 constrainedSol[i].startTime = offsetTime;
                 constrainedSol[i] = solver.SolveGTSP(graph, constraints[agentConstrained], agents[agentConstrained].orders[i], offsetTime);
             }
+
+            // Calculate solution cost as a sum of costs of tours
             for (int i = 0; i < solution.Length; i++) {
                 for (int j = 0; j < solution[i].Length; j++) {
                     this.cost += solution[i][j].cost;
                 }
             }
 
+            // Sum constraints count as a tie braking heristic for CBS
             int constr = 0;
             for (int i = 0; i < constraints.Length; i++) {
                 constr += constraints[i].Count;
@@ -236,17 +260,6 @@ namespace src_cs {
         }
 
         public void CalculateInitRoutes(Graph graph, GTSPSolver solver) {
-            /*
-            for (int i = 0; i < agents.Length; i++) {
-                var startPosition = agents[i].orders[0].vertices[0];
-                for (int j = 0; j < agents.Length; j++) {
-                    if (i == j) continue;
-                    Constraint c = new Constraint(0, startPosition, j);
-                    constraints[j].Add(c);
-                }
-            }
-            */
-
             int offsetTime = 0;
             for (int i = 0; i < solution.Length; i++) {
                 for (int j = 0; j < solution[i].Length; j++) {
@@ -269,6 +282,19 @@ namespace src_cs {
             this.time = time;
             this.vertex = vertex;
             this.agent = agent;
+        }
+
+        public override bool Equals(object obj) {
+            if (obj is Constraint) {
+                var x = (Constraint)obj;
+                if (x.agent == this.agent &&
+                    x.time == this.time &&
+                    x.vertex == this.vertex) {
+                    return true;
+                }
+                return false;
+            }
+            return base.Equals(obj);
         }
     }
 

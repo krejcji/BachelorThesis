@@ -22,7 +22,7 @@ namespace src_cs {
                     }
                 }
             }
-            Console.ReadKey();
+          //  Console.ReadKey();
             Console.WriteLine();
             // sw.Stop();
             // Console.WriteLine("Elapsed={0}", sw.ElapsedMilliseconds);

@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Runtime.Intrinsics;
-using System.Runtime.Intrinsics.X86;
 
 namespace src_cs {
     class SetOperations {
@@ -13,7 +11,7 @@ namespace src_cs {
         readonly int classesCount;
         public readonly int longsUsed;
         public delegate bool IsCompleteDel(ulong[] sets);
-        public readonly IsCompleteDel IsComplete;       
+        public readonly IsCompleteDel IsComplete;
 
 
         static SetOperations() {
@@ -235,13 +233,14 @@ namespace src_cs {
         public Tour FindShortestTour(Graph graph, SortedList<int, List<int>> constraints, Order order, int timeOffset) {
             var vertices = order.vertices;
             var classes = order.classes;
+            var orderId = order.orderId;
             so = new SetOperations(classes[^1]);
 
             var beginLoc = vertices[0];
             var targetLoc = vertices[1];
             // Init paths from depot.
             for (int i = 2; i < vertices.Length; i++) {
-                var (time, r) = graph.ShortestRoute(beginLoc, vertices[i], timeOffset, constraints, false);
+                var (time, r) = graph.ShortestRoute(beginLoc, vertices[i], 0, orderId, timeOffset, constraints, false, false);
                 timeDistances[i][time] = 1;
                 sets[i][time][0] = 1;
             }
@@ -256,22 +255,18 @@ namespace src_cs {
 
                     // Check, whether to add vertex into potential second to last on shortest path
                     if (so.IsComplete(sets[i][time])) {
-                        var (t, r) = graph.ShortestRoute(vertices[i], targetLoc, time + timeOffset, constraints, false);
-                        int[] reversed = new int[r.Length];
-                        for (int j = 0; j < r.Length; j++) {
-                            reversed[r.Length - 1 - j] = r[j];
-                        }
+                        var (t, r) = graph.ShortestRoute(vertices[i], targetLoc, i, orderId, time + timeOffset, constraints, false, true);
                         int finishTime = time + t;
                         if (tMax > finishTime) {
                             tMax = finishTime;
-                            bestSol = (finishTime, time, i, reversed);
+                            bestSol = (finishTime, time, i, r);
                         }
                     }
 
                     for (int j = 2; j < vertices.Length; j++) {
                         int vertexClass_1 = classes[j];
                         if (vertexClass_0 == vertexClass_1) continue;
-                        var (pickTime, r) = graph.ShortestRoute(vertices[i], vertices[j], time + timeOffset, constraints, false);
+                        var (pickTime, r) = graph.ShortestRoute(vertices[i], vertices[j], i, orderId, time + timeOffset, constraints, false, false);
                         if (time + pickTime < timeLimit) {
                             timeDistances[j][time + pickTime] = 1;
                             Array.Copy(sets[i][time], temp, so.longsUsed);
@@ -305,8 +300,9 @@ namespace src_cs {
             (int, int, int[]) Backtrack(int visitTime, int lastVertex, int[] unvisitedClasses) {
                 for (int i = 2; i < vertices.Length; i++) {
                     int vClass = classes[i];
+                    //int pickTime = order.pickTimes[i];
                     if (unvisitedClasses[vClass] == 0) continue;
-                    var (t, r) = graph.ShortestRoute(vertices[lastVertex], vertices[i], visitTime + timeOffset, constraints, true);
+                    var (t, r) = graph.ShortestRoute(vertices[i], vertices[lastVertex], i, orderId, visitTime + timeOffset, constraints, true, true);
                     int vTime = visitTime - t;
                     if (vTime < 0) continue;
                     ulong[] originSet = sets[i][vTime];
@@ -324,11 +320,15 @@ namespace src_cs {
                     }
                 }
                 if (allZero) {
-                    var (t1, r1) = graph.ShortestRoute(vertices[lastVertex], beginLoc, visitTime + timeOffset, constraints, true);
+                    var (t1, r1) = graph.ShortestRoute(beginLoc, vertices[lastVertex], 0, orderId, visitTime + timeOffset, constraints, true, true);
                     if (visitTime - t1 == 0)
                         return (0, 0, r1);
-                    (t1, r1) = graph.ShortestRoute(beginLoc, vertices[lastVertex], 0, constraints, false);
-                    return (0, 0, ReverseRoute(r1));
+                    (t1, r1) = graph.ShortestRoute(beginLoc, vertices[lastVertex], 0, orderId, 0, constraints, false, true);
+#if DEBUG
+                    if (visitTime - t1 != 0)
+                        throw new Exception("Route beginning time is not correct.");
+#endif
+                    return (0, 0, r1);
 
                 }
 
@@ -338,13 +338,13 @@ namespace src_cs {
                     for (int i = 2; i < vertices.Length; i++) {
                         int vClass = classes[i];
                         if (unvisitedClasses[vClass] == 0) continue;
-                        int vTime = visitTime - shortestRoutesBck[i] - routeExtension;                       
+                        int vTime = visitTime - shortestRoutesBck[i] - routeExtension;
                         if (vTime < 0) continue;
                         ulong[] originSet = sets[i][vTime];
                         if (so.SearchSubset(originSet, unvisitedClasses)) {
-                            var (t, r) = graph.ShortestRoute(vertices[i], vertices[lastVertex], vTime + timeOffset, constraints, false);
+                            var (t, r) = graph.ShortestRoute(vertices[i], vertices[lastVertex], i, orderId, vTime + timeOffset, constraints, false, true);
                             if (vTime + t == visitTime) {
-                                return (vTime, i, ReverseRoute(r));
+                                return (vTime, i, r);
                             }
                         }
                     }
@@ -352,14 +352,6 @@ namespace src_cs {
                 }
                 throw new Exception();
             }
-        }
-
-        public static int[] ReverseRoute(int[] route) {
-            var reversed = new int[route.Length];
-            for (int i = 0; i < route.Length; i++) {
-                reversed[i] = route[route.Length - 1 - i];
-            }
-            return reversed;
         }
     }
 
@@ -371,11 +363,13 @@ namespace src_cs {
         public Tour(int startTime, LinkedList<(int, int, int[])> solution) {
             this.startTime = startTime;
             List<int> sol = new List<int>();
-            for (int i = 0; i < solution.Count; i++) {
-                var solutionArr = solution.ElementAt(i).Item3;
-                for (int j = solutionArr.Length - 1; j > 0; j--) {
+            var currNode = solution.First;
+            while (currNode != null) {
+                var solutionArr = currNode.Value.Item3;
+                for (int j = 0; j < solutionArr.Length - 1; j++) {
                     sol.Add(solutionArr[j]);
                 }
+                currNode = currNode.Next;
             }
             sol.Add(solution.ElementAt(solution.Count - 1).Item2);
             this.tourVertices = sol.ToArray();
