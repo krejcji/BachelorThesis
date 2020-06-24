@@ -43,6 +43,7 @@ namespace src_cs {
         private int[][] distancesCache;
         private int[][][] routesCache;
         private AStarNode[] queueCacheA;
+        private AStarNode[] emptyArr;
         private AStarNodeFactory nodeFactory;
         private FastPriorityQueue<AStarNode> aStarQueue;
         public List<Vertex> vertices;
@@ -69,6 +70,7 @@ namespace src_cs {
             aStarQueue = new FastPriorityQueue<AStarNode>(2 * vertices.Count);
             nodeFactory = new AStarNodeFactory(vertices.Count);
             queueCacheA = new AStarNode[vertices.Count];
+            emptyArr = new AStarNode[vertices.Count];
 
             // Init orders
             var tmpOrders = new List<Order>();
@@ -148,24 +150,29 @@ namespace src_cs {
         /// <param name="y">Pick location y.</param>
         /// <param name="offsetTime">Time at the source vertex.</param>
         /// <param name="constraints"></param>
-        /// <param name="reverse">Find backwards route if true.</param>
+        /// <param name="reverseTime">Find backwards route if true.</param>
         /// <returns></returns>
-        public (int, int[]) ShortestRoute(int x, int y, int offsetTime, SortedList<int, List<int>> constraints, bool reverse) {
-            int maxTime = reverse ? offsetTime : offsetTime + distancesCache[x][y];
-            int minTime = reverse ? offsetTime - distancesCache[x][y] : offsetTime;
+        public (int, int[]) ShortestRoute(int x, int y, int offsetTime, SortedList<int, List<int>> constraints, bool reverseTime) {
+            int maxTime = reverseTime ? offsetTime : offsetTime + distancesCache[x][y];
+            int minTime = reverseTime ? offsetTime - distancesCache[x][y] : offsetTime;            
 
-            if (constraints != null) {
-                foreach (var time in constraints.Keys) {
-                    if (time >= minTime || time <= maxTime) {
-                        return AStar(x, y, constraints, offsetTime, reverse);
+            if (constraints != null && minTime>=0) {
+                var route = reverseTime ? routesCache[y][x] : routesCache[x][y];
+                // TODO: Benchmark iterating time vs iterating constraints or different data strucutre 
+                foreach (var time in constraints.Keys) {                    
+                    if (time >= minTime && time <= maxTime) {
+                        int relativeTime = time - minTime;
+                        for (int i = 0; i < constraints[time].Count; i++) {
+                            if (route[relativeTime] == constraints[time][i])
+                                return AStar(x, y, constraints, offsetTime, reverseTime);
+                        }
                     }
                 }
             }
-
             return (distancesCache[x][y], routesCache[x][y]);
         }
 
-        public (int, int[]) AStar(int x, int y, SortedList<int, List<int>> constraints, int beginTime, bool reverse) {
+        public (int, int[]) AStar(int x, int y, SortedList<int, List<int>> constraints, int beginTime, bool reverseTime) {
             var queue = aStarQueue;
             EnqueueNode(x, 0, 0, null);
 
@@ -189,10 +196,11 @@ namespace src_cs {
                 int heuristicCost;
                 int neighborRouteCost = currNode.routeCost + 1;
                 int targetOffsetTime = 0;
-
+                
                 // Stay at node for another time step, if not constrained
+                //TODO: Only before a blocked vertex?
                 if (constraints != null) {
-                    targetOffsetTime = reverse == false ? beginTime + neighborRouteCost : beginTime - neighborRouteCost;
+                    targetOffsetTime = reverseTime == false ? beginTime + neighborRouteCost : beginTime - neighborRouteCost;
                     if (constraints.ContainsKey(targetOffsetTime)) {
                         foreach (var constraint in constraints[targetOffsetTime]) {
                             if (constraint == currNode.index)
@@ -201,7 +209,7 @@ namespace src_cs {
                     }
                     heuristicCost = neighborRouteCost + distancesCache[currNode.index][y];
                     EnqueueNode(currNode.index, neighborRouteCost, heuristicCost, currNode);
-                }
+                }                
 
             Neighbors:
                 // Add all neighbors into queue, if edge is not constrained.
@@ -218,11 +226,12 @@ namespace src_cs {
                     if (constraints != null && constraints.ContainsKey(targetOffsetTime)) {
                         foreach (var constrainedVertexIdx in constraints[targetOffsetTime]) {
                             if (constrainedVertexIdx == neighborIdx)
-                                continue;
+                                goto SkipEnqueue;
                         }
                     }
-
                     EnqueueNode(neighborIdx, neighborRouteCost, heuristicCost, currNode);
+                SkipEnqueue:
+                    ;
                 }
             }
             throw new ArgumentException("Shortest path not found, check the arguments.");
@@ -232,7 +241,7 @@ namespace src_cs {
 
                 // newCost invariants - route with longer optimal length will always have higher newCost
                 //                    - of routes with the same optimal cost the one furthest from beginnig is preferred
-                float newCost = (heuristicCost << 10) + routeCost;
+                float newCost = (heuristicCost << 10) - routeCost;
 
                 if (nextNode != null) {               // update value if better cost                
                     if (nextNode.routeCost > routeCost) {
@@ -249,11 +258,8 @@ namespace src_cs {
             }
 
             void CleanUpQueueCache() {
-                while (queue.Count > 0) {
-                    var node = queue.Dequeue();
-                    node.predecessor = null;
-                    queueCacheA[node.index] = null;
-                }
+                queue.Clear();
+                Array.Copy(emptyArr, queueCacheA, queueCacheA.Length);
                 nodeFactory.ResetIndex();
             }
         }
