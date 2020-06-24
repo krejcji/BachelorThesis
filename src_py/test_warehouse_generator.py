@@ -9,16 +9,17 @@ import networkx as nx
 import matplotlib.pyplot as plt
 
 # General parameters
-WALK_SPEED = 120         # cm/sec
-PICK_SPEED = (15, 20, 30, 35, 45)      # sec
+WALK_SPEED = 100         # cm/sec
+# 1 edge per time unit
+PICK_SPEED = (30, 60, 90, 120, 120)      # sec - default values
 AISLE_DIST = 360         # cm
 PICK_LOC_DIST = 120      # cm
 
 # Warehouse specification - (type 0, type 1, type 3)
-AISLES = (5, 10, 50)
+AISLES = (10, 20, 40)
 STORAGE_COLUMNS = (AISLES[0] * 2, AISLES[1] * 2, AISLES[2] * 2)
-ITEMS_IN_BLOCK = (10, 25, 25)
-CROSS_AISLES = (2, 3, 5)
+ITEMS_IN_BLOCK = (30, 30, 30)
+CROSS_AISLES = (3, 5, 6)
 HEIGHT = (5, 5, 5)
 ITEMS_IN_AISLE = (ITEMS_IN_BLOCK[0]*(CROSS_AISLES[0]-1),
                   ITEMS_IN_BLOCK[1]*(CROSS_AISLES[1]-1),
@@ -26,15 +27,18 @@ ITEMS_IN_AISLE = (ITEMS_IN_BLOCK[0]*(CROSS_AISLES[0]-1),
 PRODUCT_CAPACITY = (ITEMS_IN_AISLE[0] * STORAGE_COLUMNS[0] * HEIGHT[0],
                     ITEMS_IN_AISLE[1] * STORAGE_COLUMNS[1] * HEIGHT[1],
                     ITEMS_IN_AISLE[2] * STORAGE_COLUMNS[2] * HEIGHT[2])
+DEPOT_NODES = (10, 20, 40)
 
-# Storage policy specification - ABC
-CLASS_A_CAPACITY = (125, 1250, 12500)
-CLASS_B_CAPACITY = (125, 1250, 12500)
-CLASS_C_CAPACITY = (250, 2500, 25000)
+# Storage policy specification - ABC  --not used currently
+CLASS_A_CAPACITY = (1000, 4000, 10000)
+CLASS_B_CAPACITY = (2000, 8000, 20000)
+CLASS_C_CAPACITY = (3000, 12000, 30000)
 
 CLASS_A_UNIQUE = 0.25
 CLASS_B_UNIQUE = 0.50
 CLASS_C_UNIQUE = 0.90
+
+UNIQUE_RANDOM = 0.075
 
 random.seed(123)
 
@@ -56,6 +60,42 @@ def calculate_distance(wh_type: int, column: int, row: int, height: int):
     :return: time in sec
     """
     return ((column // 2) * AISLE_DIST + row * PICK_LOC_DIST) / WALK_SPEED + calculate_pick_speed(height)
+
+
+def generate_and_assign_items_random(wh_type):
+    wh_capacity = PRODUCT_CAPACITY[wh_type]
+    unique_items = int(UNIQUE_RANDOM * wh_capacity)
+    items = np.zeros((STORAGE_COLUMNS[wh_type], ITEMS_IN_AISLE[wh_type], HEIGHT[wh_type], 2))
+
+    # Generate each unique item into some position
+    for i in range(1, unique_items+1):
+        while True:
+            j = random.randint(0, STORAGE_COLUMNS[wh_type]-1)
+            k = random.randint(0, ITEMS_IN_AISLE[wh_type]-1)
+            l = random.randint(0, HEIGHT[wh_type]-1)
+            if items[j, k, l, 0] == 0:
+                items[j, k, l, 0] = i
+                items[j, k, l, 1] = PICK_SPEED[l]
+                break
+
+    # Fill in the rest of free positions with random items
+    for i in range(STORAGE_COLUMNS[wh_type]):
+        for j in range(ITEMS_IN_AISLE[wh_type]):
+            used = set()
+            for k in range(HEIGHT[wh_type]):
+                if items[i, j, k, 0] != 0:
+                    used.add(items[i, j, k, 0])
+            for k in range(HEIGHT[wh_type]):
+                if items[i, j, k, 0] != 0:
+                    continue
+                while True:
+                    item = random.randint(1, unique_items)
+                    if item not in used:
+                        used.add(item)
+                        items[i, j, k, 0] = item
+                        items[i, j, k, 1] = PICK_SPEED[k]
+                        break
+    return items
 
 
 def generate_items(warehouse_type: int):
@@ -188,9 +228,9 @@ def find_items(graph, max_items):
         vertex = graph.nodes[vertex]
         if vertex['type'] == "Steiner node" or vertex['type'] == "Depot":
             continue
-        for item1, item2 in zip(vertex['left'], vertex['right']):
-            positions[int(item1)].append(idx)
-            positions[int(item2)].append(idx)
+        for height, (item1, item2) in enumerate(zip(vertex['left'], vertex['right'])):
+            positions[int(item1[0])].append((idx, 0, height))
+            positions[int(item2[0])].append((idx, 1, height))
     return positions
 
 
@@ -204,14 +244,16 @@ def generate_warehouse_graph(wh_type):
     :param wh_type: The warehouse type.
     :return: Networkx graph.
     """
-    items = assign_items_into_storage(wh_type)
+    items = generate_and_assign_items_random(wh_type)
     graph = nx.Graph()
+
+    depot_per_side = DEPOT_NODES[wh_type] // 2
 
     graph.add_node("0")
     graph.nodes["0"]['type'] = "Depot"
 
     for cross_aisle in range(CROSS_AISLES[wh_type]):
-        for aisle in range(AISLES[wh_type]):
+        for aisle in range(((AISLES[wh_type]-1)*3)+1):
             # Add 2 highway node into graph
             node_index_x = aisle
             node_index_y = cross_aisle*ITEMS_IN_BLOCK[wh_type] + (2 * cross_aisle)
@@ -244,18 +286,19 @@ def generate_warehouse_graph(wh_type):
 
     # Add all item vertices
     for aisle in range(AISLES[wh_type]):
+        x_pos = aisle*3
         for position in range(ITEMS_IN_AISLE[wh_type]):
-            node_index = "x" + str(aisle) + "y" + str(position + ((position // ITEMS_IN_BLOCK[wh_type])*2) + 2)
-            prev_index = "x" + str(aisle) + "y" + str(position + ((position // ITEMS_IN_BLOCK[wh_type])*2) + 1)
+            node_index = "x" + str(x_pos) + "y" + str(position + ((position // ITEMS_IN_BLOCK[wh_type])*2) + 2)
+            prev_index = "x" + str(x_pos) + "y" + str(position + ((position // ITEMS_IN_BLOCK[wh_type])*2) + 1)
             graph.add_node(node_index)
             graph.nodes[node_index]["type"] = "Shelf node"
-            graph.nodes[node_index]["x"] = aisle
-            graph.nodes[node_index]["y"] = position + ((position // ITEMS_IN_BLOCK[wh_type])*2) + 2
+            graph.nodes[node_index]["x"] = x_pos
+            graph.nodes[node_index]["y"] = x_pos + ((position // ITEMS_IN_BLOCK[wh_type])*2) + 2
             graph.nodes[node_index]["left"] = items[2 * aisle, position]
             graph.nodes[node_index]["right"] = items[2 * aisle + 1, position]
             graph.add_edge(node_index, prev_index, weight="120")
             if (position + 1) % ITEMS_IN_BLOCK[wh_type] == 0:
-                next_index = "x" + str(aisle) + "y" + str(position + (position // ITEMS_IN_BLOCK[wh_type]*2) + 3)
+                next_index = "x" + str(x_pos) + "y" + str(position + (position // ITEMS_IN_BLOCK[wh_type]*2) + 3)
                 graph.add_edge(next_index, node_index, weight="120")
     graph.add_edge("0", "x0y0", weight="0")
 
@@ -270,20 +313,27 @@ def generate_order(wh_graph):
     max_item_idx = np.max(np.where(item_positions))
     order_size = random.randint(6, 12)
 
+    used = set()
     for i in range(order_size):
-        item_idx = random.randint(0, max_item_idx)
-        items.append(item_positions[item_idx])
+        while True:
+            item_idx = random.randint(0, max_item_idx)
+            if item_idx not in used:
+                used.add(item_idx)
+                items.append(item_positions[item_idx])
+                break
 
     return items
 
 
-def generate_and_serialize_instance(wh_type, orders_count, file_path):
+def generate_and_serialize_instance(wh_type, agents, orders_per_agent, file_path):
     graph = generate_warehouse_graph(wh_type)
     vertices = [vertex for vertex in graph.nodes]
-    orders = []
+    agents_orders = []
 
-    for i in range(orders_count):
-        orders.append(generate_order(graph))
+    for i in range(agents):
+        agents_orders.append([])
+        for j in range(orders_per_agent):
+            agents_orders[i].append(generate_order(graph))
 
     file = io.open(file_path, "w+")
     file.write("Test warehouse instance of type " + str(wh_type) + "\n")
@@ -293,8 +343,14 @@ def generate_and_serialize_instance(wh_type, orders_count, file_path):
     for i, vertex in enumerate(vertices):
         file.write(str(i) + " " + vertex + " " + graph.nodes[vertex]["type"] + "\n")
         if graph.nodes[vertex]["type"] == "Shelf node":
-            file.write(str(graph.nodes[vertex]["left"].astype(int)) + "\n")
-            file.write(str(graph.nodes[vertex]["right"].astype(int)) + "\n")
+            left = graph.nodes[vertex]["left"]
+            right = graph.nodes[vertex]["right"]
+            for j in range(HEIGHT[wh_type]):
+                file.write(str(left[j][0].astype(int)) + "," + str(left[j][1].astype(int)) + " ")
+            file.write("\n")
+            for j in range(HEIGHT[wh_type]):
+                file.write(str(right[j][0].astype(int)) + "," + str(right[j][1].astype(int)) + " ")
+            file.write("\n")
 
     file.write("Edges:\n")
 
@@ -302,14 +358,19 @@ def generate_and_serialize_instance(wh_type, orders_count, file_path):
         file.write(edge[0] + "," + edge[1] + " ")
     file.write("\n")
 
-    file.write("Orders: " + str(orders_count) + "\n")
-    for i in range(orders_count):
-        file.write("Order number " + str(i) + ", items: " + str(len(orders[i])) + "\n")
-        for items in orders[i]:
-            file.write(str(items) + "\n")
+    file.write("Agents: " + str(agents) + "\n")
+    for i in range(agents):
+        file.write("Agent: " + str(i) + ", Orders: " + str(len(agents_orders[i])) + "\n")
+        for j in range(len(agents_orders[i])):
+            file.write("Order: " + str(j) + ", classes: " + str(len(agents_orders[i][j])) + " Source " + str(2*i) +
+                       " Target " + str(2*i) + "\n")
+            for item_class in agents_orders[i][j]:
+                for item in item_class:
+                    file.write(str(item[0]) + "," + str(item[1]) + "," + str(item[2]) + " ")
+                file.write("\n")
 
     file.close()
     print()
 
 
-generate_and_serialize_instance(1, 5, "../data/whole_instance.txt")
+generate_and_serialize_instance(1, 10, 1, "../data/whole_instance.txt")
