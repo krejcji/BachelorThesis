@@ -2,6 +2,11 @@
 
 ## Progress report
 
+#### 24.6.
+
+* Implementace CBS
+  * zatím pouze základní algoritmus bez rozšíření
+
 #### 17.6.
 
 * Implementace algoritmu pro GTSP
@@ -17,9 +22,9 @@
 
 * Generování testovacích instancí
   * 3 velikosti   (# uliček x (#bloků x délka bloku) x výška
-    1. 10   x 10       x 5           pick lokací  - 500
-    2. 20   x (2x25)x 5           lokací          - 5000
-    3. 100 x (4x25) x 5          lokací          - 50000
+    1. 20 x (2 x 30) x 5          pick lokací  - 6000
+    2. 40 x (4 x 30) x 5          lokací          - 24000
+    3. 80 x (5 x 30) x 5          lokací          - 60000
   * Random storage/ Class-based storage - ABC
 * Algoritmy - vyzkoušené
   * GTSP Solver - GLNS
