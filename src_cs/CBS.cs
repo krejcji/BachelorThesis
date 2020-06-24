@@ -83,7 +83,7 @@ namespace src_cs {
                 nodesVisitors0[solutions[j][0]].Add(j);
             }
 
-            for (int i = 0; i < maxTime-1; i++) {
+            for (int i = 0; i < maxTime - 1; i++) {
                 // Look for vertex conflicts.
                 for (int j = 0; j < instance.agents.Length; j++) {
                     if (nodesVisitors0[solutions[j][i]].Count > 1) {
@@ -126,7 +126,7 @@ namespace src_cs {
                 NextTimeStep(i);
             }
 
-        Cleanup:            
+        Cleanup:
             // Clean up the temp arrays.
             for (int i = 0; i < tours.Length; i++) {
                 for (int j = 0; j < tours[i].Length; j++) {
@@ -138,7 +138,7 @@ namespace src_cs {
             void ClearTimeStep(int time) {
                 for (int i = 0; i < instance.agents.Length; i++) {
                     nodesVisitors0[solutions[i][time]].Clear();
-                    nodesVisitors1[solutions[i][time+1]].Clear();
+                    nodesVisitors1[solutions[i][time + 1]].Clear();
                 }
             }
 
@@ -148,7 +148,7 @@ namespace src_cs {
                 }
                 var tmpVisitors = nodesVisitors0;
                 nodesVisitors0 = nodesVisitors1;
-                nodesVisitors1 = tmpVisitors;                
+                nodesVisitors1 = tmpVisitors;
             }
         }
     }

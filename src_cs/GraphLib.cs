@@ -68,7 +68,7 @@ namespace src_cs {
 
         public void Initialize(Agent[] agents) {
             aStarQueue = new FastPriorityQueue<AStarNode>(2 * vertices.Count);
-            nodeFactory = new AStarNodeFactory(vertices.Count);
+            nodeFactory = new AStarNodeFactory(2 * vertices.Count);
             queueCacheA = new AStarNode[vertices.Count];
             emptyArr = new AStarNode[vertices.Count];
 

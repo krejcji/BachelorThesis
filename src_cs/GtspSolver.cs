@@ -75,7 +75,7 @@ namespace src_cs {
         }
 
         public void Unify(ulong[] setSource, ulong[] setTarget) {
-            for (int i = 0; i < setTarget.Length; i++) {
+            for (int i = 0; i < longsUsed; i++) {
                 setTarget[i] |= setSource[i];
             }
         }
@@ -334,13 +334,11 @@ namespace src_cs {
 
                 // If not found vertex at shortest routes, the route must be longer.
                 int routeExtension = 1;
-                while (true) {
-                    for (int i = 1; i < vertices.Length; i++) {
+                while (routeExtension <= visitTime) {
+                    for (int i = 2; i < vertices.Length; i++) {
                         int vClass = classes[i];
                         if (unvisitedClasses[vClass] == 0) continue;
-                        int vTime = visitTime - shortestRoutesBck[i] - routeExtension;
-                        if (vTime < -200)
-                            throw new Exception();
+                        int vTime = visitTime - shortestRoutesBck[i] - routeExtension;                       
                         if (vTime < 0) continue;
                         ulong[] originSet = sets[i][vTime];
                         if (so.SearchSubset(originSet, unvisitedClasses)) {
@@ -352,6 +350,7 @@ namespace src_cs {
                     }
                     routeExtension += 1;
                 }
+                throw new Exception();
             }
         }
 
