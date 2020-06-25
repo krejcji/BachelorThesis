@@ -153,11 +153,11 @@ namespace src_cs {
         /// <param name="reverseSearch">Find backwards route if true.</param>
         /// <returns></returns>
         public (int, int[]) ShortestRoute(int pickVertex, int target, int itemId, int orderId, int realTime, SortedList<int, List<int>> constraints,
-            bool reverseSearch, bool returnPath) {
-            int pickTime = orders[orderId].pickTimes[itemId];            
-            int maxTime = reverseSearch ? realTime : realTime + pickTime + distancesCache[pickVertex][target];
-            int minTime = reverseSearch ? realTime - distancesCache[pickVertex][target] - pickTime : realTime;
+            bool reverseSearch, bool returnPath) {            
+            int pickTime = orders[orderId].pickTimes[itemId];
             (int, int[]) route = (distancesCache[pickVertex][target] + pickTime, routesCache[pickVertex][target]);
+            int maxTime = reverseSearch ? realTime : realTime + route.Item1;
+            int minTime = reverseSearch ? realTime - route.Item1 : realTime;            
 
 
             if (constraints != null && minTime >= 0) {
@@ -170,19 +170,19 @@ namespace src_cs {
                                 route = AStar(pickVertex, target, constraints, realTime + pickTime, reverseSearch);
                                 route.Item1 += pickTime;
                                 if (returnPath)
-                                    return (route.Item1 + pickTime, RouteWithPickVertices());
+                                    return (route.Item1, RouteWithPickVertices());
                                 else
-                                    return (route.Item1 + pickTime, null);
+                                    return (route.Item1, null);
                             }
                         }
                     }
                 }
             }
             if (!returnPath) {
-                return (distancesCache[pickVertex][target] + pickTime, null);
+                return (route.Item1, null);
             }
             else {
-                return (distancesCache[pickVertex][target] + pickTime, RouteWithPickVertices());
+                return (route.Item1, RouteWithPickVertices());
             }
 
             int[] RouteWithPickVertices() {

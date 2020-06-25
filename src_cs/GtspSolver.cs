@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Numerics;
 
 namespace src_cs {
-    class SetOperations {
+
+    public class SetOperations {
         static readonly int MAXSIZE = 1024;
         static readonly int[] shifts = new int[] { 0, 1, 2, 4, 8, 16, 32, 1, 2, 4, 8, 16, 32, 64, 128, 256, 512 };
         public static readonly ulong[] zeros = new ulong[MAXSIZE];
@@ -48,16 +50,6 @@ namespace src_cs {
                     }
                 }
             }
-            /*
-            // Init cutoff masks
-            cutOffMasks = new ulong[6];
-            for (int i = 1; i < cutOffMasks.Length; i++) {
-                ulong mask = ulong.MaxValue;
-                int shift = 64 - (2 << (i - 1));
-                mask >>= shift;
-                cutOffMasks[i] = mask;
-            }
-            */
         }
 
         public SetOperations(int classesCount) {
@@ -72,11 +64,21 @@ namespace src_cs {
             }
         }
 
-        public void Unify(ulong[] setSource, ulong[] setTarget) {
-            for (int i = 0; i < longsUsed; i++) {
-                setTarget[i] |= setSource[i];
+        public virtual void Unify(ulong[] setSource, ulong[] setTarget) {
+            if (longsUsed >= 4) {
+                for (int i = 0; i < longsUsed; i += 4) {
+                    Vector<ulong> src = new Vector<ulong>(setSource, i);
+                    Vector<ulong> target = new Vector<ulong>(setTarget, i);
+                    Vector.BitwiseOr(src, target).CopyTo(setTarget, i);
+                }
+            }
+            else {
+                for (int i = 0; i < longsUsed; i++) {
+                    setTarget[i] |= setSource[i];
+                }
             }
         }
+
 
         public void AddElement(ulong[] sets, int element) {
             if (element < 7) {
@@ -150,6 +152,32 @@ namespace src_cs {
         }
     }
 
+    public sealed class SetSmall : SetOperations {
+        public SetSmall(int classes) : base(classes) {
+
+        }
+        public sealed override void Unify(ulong[] setSource, ulong[] setTarget) {
+            for (int i = 0; i < longsUsed; i++) {
+                setTarget[i] |= setSource[i];
+            }
+
+        }
+    }
+
+    public sealed class SetLarge : SetOperations {
+        public SetLarge(int classes) : base(classes) {
+
+        }
+        public sealed override void Unify(ulong[] setSource, ulong[] setTarget) {
+            for (int i = 0; i < longsUsed; i += 4) {
+                Vector<ulong> src = new Vector<ulong>(setSource, i);
+                Vector<ulong> target = new Vector<ulong>(setTarget, i);
+                Vector.BitwiseOr(src, target).CopyTo(setTarget, i);
+            }
+        }
+    }
+
+
     class GTSPSolverFactory {
         GTSPSolver[] solvers;
         int tMax;
@@ -174,14 +202,12 @@ namespace src_cs {
     class GTSPSolver {
         SetOperations so;
         (int, int, int, int[]) bestSol;
-        int[][] timeDistances;
-        ulong[][][] sets;
-        ulong[] temp;
-        int timeLimit;
+        readonly int[][] timeDistances;
+        readonly ulong[][][] sets;
+        readonly int timeLimit;
 
         public GTSPSolver(int maxClasses, int maxItems, int maxTime) {
             so = new SetOperations(maxClasses);
-            this.temp = new ulong[so.longsUsed];
             this.timeLimit = maxTime;
 
             // Allocate memory for subsets
@@ -234,7 +260,17 @@ namespace src_cs {
             var vertices = order.vertices;
             var classes = order.classes;
             var orderId = order.orderId;
-            so = new SetOperations(classes[^1]);
+            var classesCount = classes[^1];
+            SetOperations so;
+            if (classesCount < 8) {
+                so = new SetSmall(classesCount);
+            }
+            else {
+                so = new SetLarge(classesCount);
+            }
+
+            ulong copy = 0;
+            ulong uni = 0;
 
             var beginLoc = vertices[0];
             var targetLoc = vertices[1];
@@ -251,6 +287,7 @@ namespace src_cs {
                 for (int i = 2; i < vertices.Length; i++) {
                     if (timeDistances[i][time] == 0) continue;
                     int vertexClass_0 = classes[i];
+                    so.FilterElement(sets[i][time], vertexClass_0);
                     so.AddElement(sets[i][time], vertexClass_0);
 
                     // Check, whether to add vertex into potential second to last on shortest path
@@ -269,13 +306,15 @@ namespace src_cs {
                         var (pickTime, r) = graph.ShortestRoute(vertices[i], vertices[j], i, orderId, time + timeOffset, constraints, false, false);
                         if (time + pickTime < timeLimit) {
                             timeDistances[j][time + pickTime] = 1;
-                            Array.Copy(sets[i][time], temp, so.longsUsed);
-                            so.FilterElement(temp, vertexClass_1);
-                            so.Unify(temp, sets[j][time + pickTime]);
+                            so.Unify(sets[i][time], sets[j][time + pickTime]); // Note : Happens (itemsInOrder/3) times per array entry on average
                         }
                     }
                 }
             }
+            Console.WriteLine("Results");
+            Console.WriteLine(copy);
+            Console.WriteLine(uni);
+
 
             // Reverse search the shortest tour.
             LinkedList<(int, int, int[])> solution = new LinkedList<(int, int, int[])>();
