@@ -1,3 +1,18 @@
 \chapter*{Introduction}
 \addcontentsline{toc}{chapter}{Introduction}
 
+Order picking, which is the process of retrieving items from storage to meet customer demand, and warehouse replenishment are critical functions to each supply chain.  In prior studies, these have been identified as the most labor-intensive and costly activities for almost every warehouse. The cost of order picking is estimated to be as much as 55\% of the total warehouse operating expense \cite{Tompkins2010}. Even though the use of automated equipment in the distribution centers is on the rise and has potential to lower the cost of order picking over time, manual order picking is still prevalent. In this thesis, we focus on the manual order picking problem, but the results can be applied to the automated case as well.
+\par
+
+In its essence, order picking problem is a variant of the well-known Traveling Salesman Problem. In the past, researchers have developed many approaches to solve this special case of TSP, that can be used in practice. Exact polynomial time algorithm was developed by Ratliff and Rosenthal in 1983 \cite{RR}, which solves the problem for the most common single-block warehouse layout. Because the algorithm lacks flexibility to be used in many real-world scenarios, it has been extended multiple times, for example to include warehouses with more cross-aisles \cite{roodbergen2001b} or, more recently, to take into account precedence constraints \cite{zulj2018}.
+\par
+
+Even though the exact algorithm is developed, it is the heuristic approach  that is still arguably the most commonly used in practice. These routing policies - despite the resulting routes often being suboptimal - are very quickly computed, easy to implement and can be followed effortlessly by order pickers. The heuristic algorithms can often be described by a simple, easy to remember rule. They were originally developed to be used in a single-block warehouse with narrow aisles and a single depot \cite{hall1993}, but similarly to the algorithm by Ratliff and Rosenthal \cite{RR}, the heuristics have been studied further and extended to multiple-block layouts over the years \cite{vaughan1999}\cite{roodbergen2001}. 
+\par
+
+In a typical warehouse, there are multiple order pickers working at the same time. Up until now, none of the methods mentioned considers interactions between pickers - namely picker blocking and congestion. This situation arises, when multiple pickers are given similar, intersecting routes. Many studies have been conducted on the effects of picker blocking \cite{pan2012}\cite{heath2013}\cite{klodawski2018}. Picker blocking is more pronounced in narrow aisle warehouses and can be a cause of significant delays and reduction of picking process efficiency. 
+\par
+
+Given the measurable efficiency cuts due to congestion, surprisingly little research has been done on picker routing with congestion consideration. It is goal of this thesis  to develop an algorithm that will compute routes for order pickers while avoiding mutual blocking at the same time.   TBD - how is the problem going to be solved.
+
+ TBD - In the first chapter, we begin with description of the real-world warehouse layout and processes to understand the motivation behind this thesis. Next, we will define important terms and finally, the definition of the problem we are solving will follow.

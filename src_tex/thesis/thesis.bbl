@@ -1,0 +1,128 @@
+\begin{thebibliography}{10}
+
+\bibitem{Tompkins2010}
+J.A. Tompkins, J.A. White, Y.A. Bozer, and J.M.A. Tanchoco.
+\newblock {\em Facilities Planning}.
+\newblock Wiley, 2010.
+
+\bibitem{RR}
+H~Donald Ratliff and Arnon~S Rosenthal.
+\newblock Order-picking in a rectangular warehouse: a solvable case of the
+  traveling salesman problem.
+\newblock {\em Operations research}, 31(3):507--521, 1983.
+
+\bibitem{roodbergen2001b}
+Kees~Jan Roodbergen and Ren{\'e} De~Koster.
+\newblock Routing order pickers in a warehouse with a middle aisle.
+\newblock {\em European Journal of Operational Research}, 133(1):32--43, 2001.
+
+\bibitem{zulj2018}
+Ivan {\v{Z}}ulj, Christoph~H Glock, Eric~H Grosse, and Michael Schneider.
+\newblock Picker routing and storage-assignment strategies for
+  precedence-constrained order picking.
+\newblock {\em Computers \& Industrial Engineering}, 123:338--347, 2018.
+
+\bibitem{hall1993}
+Randolph~W Hall.
+\newblock Distance approximations for routing manual pickers in a warehouse.
+\newblock {\em IIE transactions}, 25(4):76--87, 1993.
+
+\bibitem{vaughan1999}
+TS~Vaughan.
+\newblock The effect of warehouse cross aisles on order picking efficiency.
+\newblock {\em International Journal of Production Research}, 37(4):881--897,
+  1999.
+
+\bibitem{roodbergen2001}
+Kees~Jan Roodbergen and Ren{\'E}de Koster.
+\newblock Routing methods for warehouses with multiple cross aisles.
+\newblock {\em International Journal of Production Research}, 39(9):1865--1883,
+  2001.
+
+\bibitem{pan2012}
+Jason Chao-Hsien Pan and Ming-Hung Wu.
+\newblock Throughput analysis for order picking system with multiple pickers
+  and aisle congestion considerations.
+\newblock {\em Computers \& Operations Research}, 39(7):1661--1672, 2012.
+
+\bibitem{heath2013}
+Brian~L Heath, Frank~W Ciarallo, and Raymond~R Hill.
+\newblock An agent-based modeling approach to analyze the impact of warehouse
+  congestion on cost and performance.
+\newblock {\em The International Journal of Advanced Manufacturing Technology},
+  67(1-4):563--574, 2013.
+
+\bibitem{klodawski2018}
+M~Klodawski, R~Jachimowski, I~Jacyna-Golda, and M~Izdebski.
+\newblock Simulation analysis of order picking efficiency with congestion
+  situations.
+\newblock {\em International Journal of Simulation Modelling}, 17(3):431--443,
+  2018.
+
+\bibitem{mapf}
+Roni Stern, Nathan Sturtevant, Ariel Felner, Sven Koenig, Hang Ma, Thayne~T.
+  Walker, Jiaoyang Li, Dor Atzmon, Liron Cohen, T.~K.~Satish Kumar, Eli
+  Boyarski, and Roman Bart{\'{a}}k.
+\newblock Multi-agent pathfinding: Definitions, variants, and benchmarks.
+\newblock {\em CoRR}, abs/1906.08291, 2019.
+
+\bibitem{pansart2018}
+Lucie Pansart, Nicolas Catusse, and Hadrien Cambazard.
+\newblock Exact algorithms for the order picking problem.
+\newblock {\em Computers \& Operations Research}, 100:117--127, 2018.
+
+\bibitem{cambazard}
+Hadrien Cambazard and Nicolas Catusse.
+\newblock Fixed-parameter algorithms for rectilinear steiner tree and
+  rectilinear traveling salesman problem in the plane.
+\newblock {\em CoRR}, abs/1512.06649, 2015.
+
+\bibitem{weidinger2018}
+Felix Weidinger.
+\newblock Picker routing in rectangular mixed shelves warehouses.
+\newblock {\em Computers \& Operations Research}, 95:139--150, 2018.
+
+\bibitem{theys2010}
+Christophe Theys, Olli Br{\"a}ysy, Wout Dullaert, and Birger Raa.
+\newblock Using a tsp heuristic for routing order pickers in warehouses.
+\newblock {\em European Journal of Operational Research}, 200(3):755--763,
+  2010.
+
+\bibitem{goet1988}
+Marc Goetschalckx and H~Donald~Ratliff.
+\newblock Order picking in an aisle.
+\newblock {\em IIE transactions}, 20(1):53--62, 1988.
+
+\bibitem{petersen1997evaluation}
+Charles~G Petersen.
+\newblock An evaluation of order picking routeing policies.
+\newblock {\em International Journal of Operations \& Production Management},
+  1997.
+
+\bibitem{chen2013ant}
+Fangyu Chen, Hongwei Wang, Chao Qi, and Yong Xie.
+\newblock An ant colony optimization routing algorithm for two order pickers
+  with congestion consideration.
+\newblock {\em Computers \& Industrial Engineering}, 66(1):77--85, 2013.
+
+\bibitem{schr2017}
+Albert~H Schrotenboer, Susanne Wruck, Kees~Jan Roodbergen, Marjolein Veenstra,
+  and Arjan~S Dijkstra.
+\newblock Order picker routing with product returns and interaction delays.
+\newblock {\em International Journal of Production Research},
+  55(21):6394--6406, 2017.
+
+\bibitem{chen2016}
+Fangyu Chen, Hongwei Wang, Yong Xie, and Chao Qi.
+\newblock An aco-based online routing method for multiple order pickers with
+  congestion consideration in warehouse.
+\newblock {\em Journal of Intelligent Manufacturing}, 27(2):389--408, 2016.
+
+\bibitem{de2018}
+Roberta De~Santis, Roberto Montanari, Giuseppe Vignali, and Eleonora Bottani.
+\newblock An adapted ant colony optimization algorithm for the minimization of
+  the travel distance of pickers in manual warehouses.
+\newblock {\em European Journal of Operational Research}, 267(1):120--137,
+  2018.
+
+\end{thebibliography}

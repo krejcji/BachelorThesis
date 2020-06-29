@@ -1,5 +1,64 @@
-\chapter{Title of the second chapter}
+\chapter{Related work}
+In this chapter, we will explore in detail the research that has been carried out on the topic. We will go through the related problems and sum up the most promising results.
 
-\section{Title of the first subchapter of the second chapter}
+\section{Picker routing}
+There are number of issues we have to look out for when reviewing literature on the picker routing problem. First, algorithms that solve the problem are narrowly specialized. Usually the algorithm is developed for a certain warehouse layout and cannot be used with any other. Most of the time, even less significant aspects like depot position matter. But the biggest issue is connected with the objective of this thesis - most of the algorithms are designed for single storage warehouses that have one item type stored at single location only. In this thesis, we need to find routes in a warehouses with scattered storage, which on the other hand can contain multiple locations with the same item stored there. Secondly, the performance of the algorithms varies according to specific instances. For example, some heuristic might give short routes when customer orders are larger, but it could perform poorly otherwise. Thirdly, connected with the performance from the computational side, we could encounter larger warehouse instances, therefore some optimal exponential time algorithms could be too slow to be usable.
 
-\section{Title of the second subchapter of the second chapter}
+
+
+\subsection{Exact algorithms}
+Even though picker routing problem is a special case of the Traveling Salesman Problem and hence is generally NP hard, optimal algorithm linear in the number of aisles was developed by Ratliff and Rosenthal\cite{RR} for the single-block warehouse layout. The authors assumed a low-level storage rack, single depot in the front cross aisle and narrow picking aisles. Ratliff and Rosenthal used dynamic programming approach, gradually building \emph{partial tour subgraphs}, which could in short be described as subgraphs, that can be extended into a valid tour. The authors noticed, that the PTSs can be divided into fixed number of equivalence classes and therefore the algorithm needs to consider only fixed number of minimum length PTSs at any given step.
+\par
+Since warehouses often have more complex layouts, the extension of the algorithm to three cross aisles followed\cite{roodbergen2001b}. The latest contribution is by Pansart et al.\cite{pansart2018}, who applied an algorithm for the rectilinear TSP developed by Cambazard and Catusse\cite{cambazard}. However, the complexity of the algorithm increases rapidly with the number of cross aisles. More specifically, the time complexity of the algorithm is $\mathcal{O} (nh7^h)$, where n is the number of vertices and h is the number of horizontal lines. The situation changes, when we introduce scattered storage into the problem. No such algorithm can have polynomial time complexity for any common warehouse layout, because it was proved that the problem is NP hard for any warehouse with rectangular storage\cite{weidinger2018}.
+\par
+Another approach to solving the picker routed problem optimally is modifying some algorithm that was originally developed for solving the TSP. Drawback of this approach is the often unpredictable run-time behavior. For the purpose of finding a tour in narrow-aisle warehouse, Roodbergen and de Koster used a branch-and-bound method\cite{roodbergen2001}. Theys et al. applied the exact Concorde TSP solver, though for comparison with other methods only.\cite{theys2010}.
+
+
+
+\subsection{Heuristics}
+Another possible and arguably the most frequently used practice for calculating picking routes is by the means of heuristic algorithms. Unlike the exact algorithms, heuristics are not guaranteed to find the shortest tour possible, but this attribute is offsetted by the ease of implementation and faster calculation times. Moreover, heuristic rules are usually easy to remember and follow for order pickers, who might struggle with following more complex routes. \par
+
+For narrow-aisle warehouses, Hall proposed and evaluated performance of three simple heuristic routing strategies\cite{hall1993}, namely the \emph{Traversal} strategy, \emph{Midpoint} and \emph{Largest Gap} strategy. Another common routing strategy is \emph{S-shape} heuristic. We will briefly describe the traversal strategy for illustration. The traversal strategy tells the picker to cross through the entire lenght of any aisle containing at least one pick location. The other strategies can be described in analogous manner. Later, the \emph{return} and the \emph{composite} heuristics were further developed\cite{petersen1997evaluation}. What all of these heuristics have in common is that they were originally developed for single block layout only. The multi-block layout variants will follow in the next paragraph.
+\par
+
+Extension to multi-block layout for S-shape and largest gap heuristic was introduced by Roodbergen and de Koster, along with the new \emph{combined} heuristic\cite{roodbergen2001}. Chen et al. developed two modifications of S-shape heuristics\cite{chen2013ant}, that attempt to avoid congestion. In the first modification, this is achieved by the condition that if an aisle is already occupied by one picker, the other must wait at an entrance of the aisle. The other modification considers spatial relationships between picked item and the next item to determine the travel time and the waiting time. If congestion occurs, it can dynamically reroute the picker. These heuristics were introduced as a benchamark for the Ant Colony Optimization algorithm, that was developed in the same paper as well.
+
+\par
+Recently, Weidinger developed new heuristic approach to address routing in scattered storage warehouses\cite{weidinger2018}. His approach proves to be very efficient, the autor states just $0.5\%$ mean optimality gap in the paper. Because of the complexity of the problem, author partitioned the problem into two parts - storage positions selection and picker routing. The positions selection is done by three simple priority rules, that compute route distances implicitly, and are capable of finding the shortest tour for the given problem instace.
+\par
+The choice of the best heuristic depends on many factors, among the most important are pick density, number of cross aisles and storage policy. The difference between heuristic and optimal route can be as low as $1\%$, but it can get much higher as well\cite{roodbergen2001}, especially if the wrong heuristic for the situation is chosen. There are more rule-based heuristics, but as an overview, the list provided is sufficient.
+
+\par
+Another kind of heuristics worth mentioning are so called \emph{improvement heuristics}. They try to improve an initial solution generated by some rule-based heuristic by means of local search. Improvement heuristics are oftentimes more general than order picker routing algorithms, because they are usually used when solving TSP directly.  Improvement heuristics are for example the \emph{2-opt} and the \emph{3-opt} local searchech or their generalization - the \emph{LKH} TSP heuristic. The LKH heuristic is applied in the paper written by Theys et al\cite{theys2010}.
+
+
+
+\subsection{Meta-heuristics}
+To complete the list of all approaches to the picker routing problem found in literature, we must not forget the meta-heuristics, which gained popularity mostly in the recent years. In the single block case, meta-heuristic approaches are used mostly to solve complex  combined optimization problems, for example the joint order batching and picker routing problem. The exception is a paper, in which the authors used hybrid genetic algorithm to solve picker routing with product returns and even considered interactions between the order pickers\cite{schr2017}.
+\par
+
+For the multi-block warehouses, use of meta heuristic algorithms is more frequent for solving picker routing independently, but the combined approaches are still prevalent. One of the earliest uses of meta heuristic was by Chen et al.\cite{chen2013ant}, whose work was already mentioned in the heuristics subsection. They applied an Ant Colony Optimization approach to multi-block narrow-aisle warehouse with two order pickers while also accounting for congestion. The work was extended in 2016 to include online routing method under nondeterministic picking time\cite{chen2016}. Authors concluded, that the new method can reduce the order service time by coping with the congestion.
+\par
+
+Another algorithm, that uses ACO optimization, is FW-ACO\cite{de2018}. The algorithms is a combination of the ACO meta-heuristic and Floyd-Warshall algorithm. Authors claim, that the algorithm is best suited for complex warehouse configurations, where the shortest path generated by the FW-ACO is usually significantly better than the path returned by regular heuristic algorithms.
+\par
+
+
+
+
+\section{Multi-agent path finding}
+
+\subsection{Reduction-based solvers}
+
+
+
+\subsection{Rule-based solvers}
+
+
+
+\subsection{Search-based solvers}
+
+
+
+
+\section{TSP}

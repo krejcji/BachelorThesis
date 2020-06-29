@@ -1,7 +1,100 @@
-\chapter{Title of the first chapter}
+\chapter{Multi agent picker routing}
+In this chapter, first we describe the real-world warehouses that motivate this thesis and after that, the formulation of the problem will follow. Lastly we will introduce related problems in this chapter.
 
-An~example citation: \cite{Andel07}
+\section{Real-world warehouse specification}
 
-\section{Title of the first subchapter of the first chapter}
+Condider a parallel-aisle warehouse with narrow vertical aisles and several horizontal cross-aisles as shown in the Figure 1.1 for illustration. Furthermore, the warehouse is high bay, meaning it has storage racks with pallets stored at multiple height levels. In addition to the main storage area, the warehouse may also contain special zones, e.g. freezers and regions separated by walls that are connected to the main grid. There are two areas that are connected to the Input/Output ports of the warehouse - the inbound and outbound staging areas. Inbound area serves as a buffer for new products arriving to the warehouse that are waiting to be restocked. Outbound area has similar purpose, but in reverse - its where completed customer orders are taken after they have been picked up in the storage area and are waiting to be loaded into trucks for delivery. Products are stored in vertical aisles on both sides. One product type can be stored at multiple locations in the warehouse.
 
-\section{Title of the second subchapter of the first chapter}
+\begin{figure}[!b]
+    \centering
+    \begin{minipage}{0.45\textwidth}
+        \centering
+        \includegraphics[height=1.15\textwidth]{../img/warehouse_layout.png} % first figure itself
+        \caption{Warehouse layout}
+    \end{minipage}\hfill
+    \begin{minipage}{0.45\textwidth}
+        \centering
+        \includegraphics[height=1.15\textwidth]{../img/Pallet_racks.jpg}
+        \caption{High bay storage}
+    \end{minipage}
+\end{figure}
+
+People or autonomous agents navigate through the warehouse. In this thesis, we will be dealing mostly with manual warehouses. There are two kinds of tasks we consider - order picking and warehouse replenishment. To recapitulate, order picking is the process of retrieving items from storage, usually given to the agent on the so called pick list. The reverse process is replenishment. From our perspective, the only difference between the two processes is the staging area the agent begins or ends his tour at. Therefore, to simplify the terminology, we will refer to all people performing these tasks as order pickers, or agents more generally. 
+\par
+
+During the workday, order pickers will be assigned cutomer orders. The orders, their assignment to specific agents and the precise sequence is known in advance. Agents walk or ride through the warehouse with a picking device and pick items from a pick list, or replenish items respectively. We assume that the picking device has enough capacity to carry all items specified in any customer order.
+As already mentioned, the aisles are narrow, meaning that the order picker can reach product racks on both sides of an aisle without any time penalty, but one order picker cannot pass another in aisle.
+\par
+
+The goal is to plan routes for order pickers so that the time spent picking is minimized, avoiding any collisions. We will split the problem into two parts. First part, since the problem is real-world motivated, is the transformation of real-world instances into abstract form. This abstract view will serve as an input for the second part of the problem - the algorithm that will calculate the optimal routes.
+
+
+\section{Problem input}
+We will neglect the real-world specifics for now and focus on the abstract problem only. The input to the abstract multi-agent picker routing problem is:
+ \begin{enumerate}
+ \item A directed graph $G=(V,E)$, which is assumed to represent a 4-connected grid with obstacles. The vertices of the graph are all possible locations for the agents,  and the edges are possible transitions. All edges have unit weight.
+ \item Set of m tasks $O=\{O_1,...,O_m\}$. Each task is specified by a start vertex, $start_{O_i} \in V$, a goal vertex, $ goal_{O_i} \in V$ and a collection of sets, where sets contain vertices from $G$ and are mutually disjoint.
+ \item k agents $a_1,...,a_k$.
+ 
+ \item For each agent $a_k \in A$, an ordered list $R_k$ is given, such that every task $O_i \in O$ is contained in exactly one list $R_j$.
+  
+ \end{enumerate}
+ Time is discretized into time steps. We assume without loss of generality, that the start vertex of any task is equal to the goal vertex of previous task in the corresponding ordered list, if such task exists. 
+
+
+\section{Problem formulation}
+Let input to the problem be the same as just defined. Each agent occupies a single vertex at any given time and similarly, each vertex and edge can be used by at most one agent at any given time step. Agents can perform one of the three actions at a time - \emph{stay} at the vertex, \emph{move} to an adjacent vertex and finally, perform a \emph{visit} action.
+\par
+
+All agents are given a list of tasks. Each task contains a collection of sets. The sets consist of locations to be visited - from each set, exactly one location has to be \emph{visited}. Such visit using the special action takes some positive time t specific for each item, location pair - an agent must stay at least t time units at the vertex. For the other vertices and regular movement actions, such condition does not apply and an agent can stay at the vertex for arbitrarily many time steps.
+
+Agents perform the tasks one at a time and after an agent finishes a task, he immediately begins to perform the next one. The order in which the tasks are performed is given.
+
+The goal is to find a tour for each task and agent, such that exactly one vertex from each set is visited for a given task and the tours are minimizing the sum of costs objective function.
+
+\section{Related problems}
+
+\begin{definition} (Steiner TSP). 
+The Steiner traveling salesman problem is a NP-hard problem derived from the TSP. Given a list of cities, some of which are required to be visited, and the lengths of roads between them, the goal is to find the shortest possible walk that visits each required city and then returns to the origin city. Vertices may be visited more than once and edges may be traversed more than once as well.
+\end{definition}
+
+In its basic, single agent form, the picker routing problem is classified as Steiner TSP. The issue is, besides dealing with single agent situation only, that the Steiner TSP requires visiting of vertices from one set only. To satisfy the real-world requirement, that one item can be stored at multiple locations in the warehouse, we need another TSP variant.
+
+\begin{definition} (Generalized TSP), also known as the set TSP, is a generalization of the TSP. 
+The goal is to find a shortest tour in a graph, which visits all specified subsets of vertices of a graph. The subsets of vertices must be disjoint.
+\end{definition}
+Any Generalized TSP solver can actually be used to find a solution to an instance of single agent, single order subproblem. We would only need to preprocess the input graph to include only required vertices for the given tour. As a generalization of the TSP, there is a direct transformation for an instance of the set TSP to an instance of the standard asymmetric TSP. But gTSP still doesn't fit the requirements and we need to introduce yet another related problem to help us deal with the multiple agents situation.
+ 
+ (Pozn - nechat definice nize primo z clanku, nebo prepsat vlastnimi slovy?)
+ \begin{definition} (Multi agent path finding)\cite{mapf}
+ The input to a classical MAPF problem with $k$ agents is a tuple $\langle G,s,t \rangle$, where $G=(V,E)$ is an undirected graph, $s : [1,...,k] \to V $ maps an agent to a source vertex, and $ t : [1,...,k] \to V$ maps an agent to a target vertex. Time is assumed to be discretized, and in every time step each agent is situated in one of the graph vertices and can perform a single \emph{action}. An action is a function $a:V \to V$, such that $ a(v) = v'$ means that if an agent is at vertex v and performs $a$ then it will be in vertex $v'$ in the next time step. Each agent has two types of actions: \emph{wait} and \emph{move}. A \emph{wait} action means that the agent stays in its current vertex another time step. A \emph{move} action means that the agent moves from its current vertex $v$ to an adjacent vertex $v'$ in the graph.
+ \par
+ For a sequence of actions $\pi = (a_1,...,a_n)$ and an agent $i$, we denote by $\pi_i[x]$ the location of the agent after executing the first $x$ actions in $\pi$, starting from the agent's source $s(i)$. Formally, $\pi_i[x] = a_x(a_{x-1}(...a_1(s(i))))$. A sequence of actions $\pi$ is a single-agent plan for agent $i$ iff executing this sequence of actions in $s(i)$ results in being at $t(i)$. A solution is a set of $k$ single-agent plans, one for each agent. 
+ \end{definition}
+ 
+ 
+ The concept of collision will be introduced separately now. For the purposes of this thesis, we are interested in two types of \emph{conflicts} - the \emph{vertex conflicts} and the \emph{edge conflicts}. Finally, o objective function for comparing the solutions has been defined yet. We will work with two objective functions throughout the thesis - the makespan, and the sum of cost.
+ 
+  
+ \begin{definition} (Vertex conflict)\cite{mapf}. A \emph{vertex conflict} between $\pi_i$ and $\pi_j$ occurs iff according to these plans the agents are planned to occupy the same vertex at the same time step.
+ \end{definition}
+ 
+ 
+ \begin{definition} (Edge conflict)\cite{mapf}. A \emph{edge conflict} between $\pi_i$ and $\pi_j$ occurs iff one agent is planned to occupy a vertex that was occupied by another agent in the previous time step.
+ \end{definition} 
+
+
+ \begin{definition}(MAPF objective funtctions)\cite{mapf}
+ 	\begin{enumerate}
+ 		\item \textbf{Makespan.} The number of time steps required for all agents to reach their target. For MAPF solution $\pi = \{\pi_1,...,\pi_k\}$, the makespan of $\pi$ is defined as $max_{1\leq i \leq k } | \pi_i |.$
+ 		\item \textbf{Sum of costs.} The sum of time steps required by each agent to reach its target. The sum of costs of  $\pi$ is defined as $ \sum_ {1\leq i \leq k} | \pi_i | .$  
+ 	\end{enumerate}
+ \end{definition}
+ 
+ 
+ The multi agent path finding problem has many variants and extensions, but the definitions above will suffice in providing the terminology and concepts needed for our purposes. MAPF might be the closely related problem of the three mentioned. Suppose that for some agent $a_i$, $\pi = \{ \pi_1,...,\pi_k \}$ is a permutation of vertices that are required to be visited by the agent $a_i$ in a given task. To convert the gTSP solution into a single-agent plan, we just need to solve $k-1$ single agent path finding problems and concatenate the paths into a single path, or, to be more precise, a walk. Likewise, if we look at the problem from a different perspective, the difference lies in the fact, that instead of simple and non-conflicting routes, we search for non-conflicting tours for the agents instead.
+ %%
+%\par 
+%Every agent individually is performing the task of the picker routing problem - he must visit all %locations given on a so called pick list in a single, shortest possible tour.
+%\par When considering all agents together, the individual solutions must also avoid any collisions with other agents - no two agents can occupy the same location at the same time (vertex conflict) and the same condition holds for edges (edge conflict). This part of the problem resembles the MAPF, with the major diferrence that we do not search for optimal paths, but optimal tours satifying all additional conditions instead. 
+%%

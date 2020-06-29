@@ -25,6 +25,8 @@
 % \setlength\headheight{0mm}
 % \let\openright=\cleardoublepage
 
+%\setlength{\parskip}{0.1em}
+
 %% Generate PDF/A-2u
 \usepackage[a-2u]{pdfx}
 
@@ -51,10 +53,12 @@
 \usepackage{paralist}       % improved enumerate and itemize
 \usepackage{xcolor}         % typesetting in color
 
+
+\newtheorem{definition}{Definition}
 %%% Basic information on the thesis
 
 % Thesis title in English (exactly as in the formal assignment)
-\def\ThesisTitle{Multi-agent path finding for order pickers}
+\def\ThesisTitle{Multi-agent picker routing problem}
 
 % Author of the thesis
 \def\ThesisAuthor{Jiří Krejčí}
@@ -93,7 +97,7 @@ Abstract.
 
 % 3 to 5 keywords (recommended), each enclosed in curly braces
 \def\Keywords{%
-{key} {words}
+{multi-agent path finding}, {picker routing}, {warehouse}, {TSP}
 }
 
 %% The hyperref package for clickable links in PDF and also for storing
@@ -117,6 +121,8 @@ Abstract.
 \include{preface}
 \include{chap01}
 \include{chap02}
+\include{chap03}
+\include{chap04}
 
 \include{epilog}
 
