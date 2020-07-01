@@ -2,6 +2,10 @@
 
 ## Progress report
 
+#### 1.7.
+
+* Práce na textu - 1.,2. a 3. kapitola
+
 #### 24.6.
 
 * Implementace CBS
