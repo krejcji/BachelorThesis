@@ -88,11 +88,6 @@ Christophe Theys, Olli Br{\"a}ysy, Wout Dullaert, and Birger Raa.
 \newblock {\em European Journal of Operational Research}, 200(3):755--763,
   2010.
 
-\bibitem{goet1988}
-Marc Goetschalckx and H~Donald~Ratliff.
-\newblock Order picking in an aisle.
-\newblock {\em IIE transactions}, 20(1):53--62, 1988.
-
 \bibitem{petersen1997evaluation}
 Charles~G Petersen.
 \newblock An evaluation of order picking routeing policies.
@@ -124,5 +119,13 @@ Roberta De~Santis, Roberto Montanari, Giuseppe Vignali, and Eleonora Bottani.
   the travel distance of pickers in manual warehouses.
 \newblock {\em European Journal of Operational Research}, 267(1):120--137,
   2018.
+
+\bibitem{li2020}
+Jiaoyang Li, Graeme Gange, Daniel Harabor, Peter~J Stuckey, Hang Ma, and Sven
+  Koenig.
+\newblock New techniques for pairwise symmetry breaking in multi-agent path
+  finding.
+\newblock In {\em Proceedings of the International Conference on Automated
+  Planning and Scheduling}, volume~30, pages 193--201, 2020.
 
 \end{thebibliography}

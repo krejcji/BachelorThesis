@@ -1,4 +1,55 @@
 \chapter{Analysis}
-In this section, we will discuss approaches, that could be used to solve out problem.
-
+In this section, we will discuss approaches, that could possibly be used to solve the problem. \\
+Pozn. V této fázi jsem se především snažil o to, abych shrnoul své myšlenky do souvislého textu. Takto bude možné snadněji najít případné nesrovnalosti.
 \section{Solution approaches}
+We have identified the closely related problems and reviewed the literature in order to compile a list of possible approaches. Now, we will go through the individual approaches and look into possible uses and extensions. Since the problem is actually twofold, we have two ways of looking at the problem - as a picker routing problem with extension to multiple agents, or as a multi-agent path finding problem modified to search for tours instead. The goal of this chapter is to find the most promising approach. One of the issues we face, as was already stated, is that both problems are NP hard. As a consequence, we will have to be careful when considering optimal algorithms, as the time needed to find a solution could easily exceed any limits we might impose. In other words, the use of heuristics might be required in order to get reasonable computation times. On the other hand, we benefit from the extensive research in both areas that has already been done. 
+\par
+First idea might be to express the problem as a whole as an mixed integer programming problem. Unfortunately, even though the solvers are powerful, we can assume, that real-world instances would be too large to be solved, or even too large to be loaded into computer memory.
+
+
+\subsection{Picker routing problem view}
+
+The picker routing problem is probably as close to our problem as we can get. Nevertheless, since the algorithms for picker routing problem are so specialized, modification to match our problem specification could prove to be challenging. 
+\subsubsection{Optimal}
+Starting with the optimal polynomial time algorithm by Ratliff and Rosenthal\cite{RR}, we can immediately conclude from the work of Weidinger\cite{weidinger2018}, that even if the modification of the algorithm to scattered storage was possible, it would not preserve the time complexity. Another issues we would face are the multi-agent scenario and the non-standard warehouse features. The algorithm is too specific. Therefore, use of this algorithm in our work doesn't seem plausible. Similarly, incorporating our requirements into TSP instance would probably be way too complex. It is possible to reduce gTSP instance into asymmetric TSP instance without much effort. The complex part would be expressing the multi-agent constraints, which would probably cause, that the off-the-shelf TSP solvers would struggle with instances of real-world size.
+\par
+
+\subsubsection{Heuristic}
+With rule-based heuristic approaches such modifications are definitely possible, since Chen et al. already developed modification to mitigate picker blocking based on the S-shape heuristic\cite{chen2013ant} and Weidinger developed heuristic for scattered storage\cite{weidinger2018}. The only thing that would be left to consider in the hypothetical combined heuristic is, how to deal with the non-standard areas we might encounter in our test instances. This could probably be solved by adding a set of new rules. In the modified S-shape heuristics, pickers wait at entrance of the subaisle, if the subaisle is already occupied. This alleviates congestion, but at the expense of time spent waiting. Better alternative could be having one-way subaisles. That way, pickers would still have to wait, but for shorter periods, which might offset the extra time spent travelling to the right subaisle entrances. In conclusion, rule-based heuristic routing policy seems possible, but the resulting routes would most likely be far from optimal. We might consider using such approach as a benchmark. Lastly, the heuristic TSP approaches have the same issue as exact. If we attempted to reduce the problem into TSP, the reduced instance would be too large and too complex.
+\par
+
+The last picker routing problem approach to consider is the use of meta-heuristic algorithm. Because the meta-heuristic approach is versatile, it might work reasonably well. The issue here is, that developing and fine-tuning meta-heuristic algorithm requires considerable amount of experience to do right. Another reason not to try this method is simply that there might be better and more reliable approaches.
+
+
+\subsection{Multi-agent path finding view}
+
+The problem we are dealing with is multi-agent in its nature, therefore, multi-agent point of view seems logical. Surprisingly, the number of options to consider is smaller than in the previous case. On the other hand, the advantage is that some of the recent state-of-the-art algorithms are customizable, so it might be possible to employ problem-specific knowledge into the solution.
+
+\subsubsection{Optimal}
+We have two options when considering optimal MAPF algorithms, the search-based algorithms and the reduction-based algorithms. Unproven heuristic shared among researchers says that reduction-based algorithms usually perform better, when the graphs are smaller and densly populated, while the search-based approaches are performing better, when the instance is large and the number of expected conflicts is low. Therefore, we will focus mainly on the search-based approaches.
+\par
+
+Because of the added complexity of searching for gTSP tours instead of paths, it's probably safe to say, that A* based approaches wouldn't perform well. It is not even clear what the heuristic function of A* should look like, since there is not a single location the agent is trying to reach.
+\par
+The ICST seems to be performing reasonably well on the MAPF test instances. It's two level approach fits our scenario better, since we would have to modify the low-level only. The issue we would face is, how to efficiently enumerate all solutions of cost $C_i$. Another issue is, that picking can take considerable amount of time and in the worst case scenario, some agent would have to wait for another for a long time period, causing many nodes on the high-level to be opened.
+\par
+
+The CBS is one of the most recent algorithms for MAPF. It is also a two-level algorithm with many possible extensions, that could improve performance. On high-level, we could implement prioritizing conflicts according to some heuristic rules, or, we could use the concept of corridor symmetry to resolve corridor conflicts in a smart way\cite{li2020}. On the low-level, we just need gTSP solver, that would be capable of blocking specific edges at specific time. The solver could be heuristic or optimal, depending on the instance size. 
+\par
+
+The last recent contribution is the Branch-and-Cut-and-Price algorithm. Authors have shown, that it has potential to outperform CBS, especially on larger instances. Furthermore, this approach is also capable of domain-specific reasoning to improve its performance. To incorporate gTSP into the framework, we would need to implement a \emph{pricer} -- an algorithm, that solves single-agent problem with modified objective function to find improving tours.
+
+
+\subsubsection{Heuristic}
+From the heuristic approaches, prioritized planning seems promising. Because its minimal overhead, it would most likely enable us to use optimal gTSP algorithm for finding the tours. Furthermore, because the warehouse is using scattered storage, the algorithm would still have some degrees of freedom even when optimizing the tour for the last agents. In order to improve the quality of solutions, we could make heuristic rules for determining the order of agents, or recalculate the solution with different ordering of agents, if the tour was far longer than optimal for one of the agents.
+\par
+push and swap?
+
+
+
+
+
+
+\section{Conflict based search}
+
+
