@@ -1,4 +1,4 @@
-using Priority_Queue;
+﻿using Priority_Queue;
 using System;
 using System.Collections.Generic;
 
@@ -13,7 +13,7 @@ namespace src_cs {
         private readonly int maxTime;
         int[][] solutions;
 
-        public Tour[][] FindRoutes() {
+        public Tour[][] FindTours() {
             var queue = new FastPriorityQueue<CBSNode>(instance.agents.Length * 200);
             var root = new CBSNode(instance.agents);
             root.CalculateInitRoutes(instance.graph, solver);
@@ -54,17 +54,8 @@ namespace src_cs {
                 solutions[i] = new int[maxTime];
             }
 
-            int maxClasses = 0;
-            int maxOrders = 0;
-            int maxItems = 0;
-            foreach (var agent in instance.agents) {
-                maxOrders = maxOrders < agent.orders.Length ? agent.orders.Length : maxOrders;
-                foreach (var order in agent.orders) {
-                    maxClasses = maxClasses < order.classes[^1] ? order.classes[^1] : maxClasses;
-                    maxItems = maxItems < order.vertices.Length ? order.vertices.Length : maxItems;
-                }
-            }
-            int maxSolverTime = maxTime / maxOrders;
+            GTSPSolver.FindMaxValues(instance.agents, maxTime, out int maxClasses,
+                out int maxItems, out int maxSolverTime);
             this.solver = new GTSPSolver(maxClasses, maxItems, maxSolverTime);
         }
 
