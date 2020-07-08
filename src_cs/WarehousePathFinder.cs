@@ -2,15 +2,18 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Numerics;
+using System.Runtime.Intrinsics;
 
 namespace src_cs {
-    class WarehousePathFinder {
+class WarehousePathFinder {
         static void Main(string[] args) {
             WarehouseInstance wi = InstanceParser.Parse("../../../../../data/whole_instance.txt");
-            Stopwatch sw = new Stopwatch();
-            // sw.Start();
+            // sw.Start();          
+            PrioritizedPlanner pp = new PrioritizedPlanner(wi, 1000);
+            var tours = pp.FindTours();
             CBS cbs = new CBS(wi, 1000);
-            var sol = cbs.FindRoutes();
+            var sol = cbs.FindTours();
             for (int i = 0; i < 1000; i++) {
                 for (int j = 0; j < sol.Length; j++) {
                     for (int k = 0; k < sol.Length; k++) {
@@ -22,7 +25,7 @@ namespace src_cs {
                     }
                 }
             }
-          //  Console.ReadKey();
+            Console.ReadKey();
             Console.WriteLine();
             // sw.Stop();
             // Console.WriteLine("Elapsed={0}", sw.ElapsedMilliseconds);

@@ -199,7 +199,7 @@ namespace src_cs {
         }
     }
 
-    class GTSPSolver {
+    sealed class GTSPSolver {
         SetOperations so;
         (int, int, int, int[]) bestSol;
         readonly int[][] timeDistances;
@@ -277,6 +277,7 @@ namespace src_cs {
             // Init paths from depot.
             for (int i = 2; i < vertices.Length; i++) {
                 var (time, r) = graph.ShortestRoute(beginLoc, vertices[i], 0, orderId, timeOffset, constraints, false, false);
+                if (time == 0) continue;
                 timeDistances[i][time] = 1;
                 sets[i][time][0] = 1;
             }
@@ -293,17 +294,19 @@ namespace src_cs {
                     // Check, whether to add vertex into potential second to last on shortest path
                     if (so.IsComplete(sets[i][time])) {
                         var (t, r) = graph.ShortestRoute(vertices[i], targetLoc, i, orderId, time + timeOffset, constraints, false, true);
-                        int finishTime = time + t;
+                        if (t == 0) continue;
+                            int finishTime = time + t;
                         if (tMax > finishTime) {
                             tMax = finishTime;
                             bestSol = (finishTime, time, i, r);
-                        }
+                        }                        
                     }
 
                     for (int j = 2; j < vertices.Length; j++) {
                         int vertexClass_1 = classes[j];
                         if (vertexClass_0 == vertexClass_1) continue;
                         var (pickTime, r) = graph.ShortestRoute(vertices[i], vertices[j], i, orderId, time + timeOffset, constraints, false, false);
+                        if (pickTime == 0) continue;
                         if (time + pickTime < timeLimit) {
                             timeDistances[j][time + pickTime] = 1;
                             so.Unify(sets[i][time], sets[j][time + pickTime]); // Note : Happens (itemsInOrder/3) times per array entry on average
@@ -311,10 +314,6 @@ namespace src_cs {
                     }
                 }
             }
-            Console.WriteLine("Results");
-            Console.WriteLine(copy);
-            Console.WriteLine(uni);
-
 
             // Reverse search the shortest tour.
             LinkedList<(int, int, int[])> solution = new LinkedList<(int, int, int[])>();
@@ -342,6 +341,7 @@ namespace src_cs {
                     //int pickTime = order.pickTimes[i];
                     if (unvisitedClasses[vClass] == 0) continue;
                     var (t, r) = graph.ShortestRoute(vertices[i], vertices[lastVertex], i, orderId, visitTime + timeOffset, constraints, true, true);
+                    if (t == 0) continue;
                     int vTime = visitTime - t;
                     if (vTime < 0) continue;
                     ulong[] originSet = sets[i][vTime];
@@ -360,9 +360,9 @@ namespace src_cs {
                 }
                 if (allZero) {
                     var (t1, r1) = graph.ShortestRoute(beginLoc, vertices[lastVertex], 0, orderId, visitTime + timeOffset, constraints, true, true);
-                    if (visitTime - t1 == 0)
+                    if (visitTime - t1 == 0 && t1 != 0)
                         return (0, 0, r1);
-                    (t1, r1) = graph.ShortestRoute(beginLoc, vertices[lastVertex], 0, orderId, 0, constraints, false, true);
+                    (t1, r1) = graph.ShortestRoute(beginLoc, vertices[lastVertex], 0, orderId, 0+timeOffset, constraints, false, true);
 #if DEBUG
                     if (visitTime - t1 != 0)
                         throw new Exception("Route beginning time is not correct.");
@@ -375,6 +375,7 @@ namespace src_cs {
                 int routeExtension = 1;
                 while (routeExtension <= visitTime) {
                     for (int i = 2; i < vertices.Length; i++) {
+                        if (shortestRoutesBck[i] == 0) continue;
                         int vClass = classes[i];
                         if (unvisitedClasses[vClass] == 0) continue;
                         int vTime = visitTime - shortestRoutesBck[i] - routeExtension;
@@ -382,7 +383,7 @@ namespace src_cs {
                         ulong[] originSet = sets[i][vTime];
                         if (so.SearchSubset(originSet, unvisitedClasses)) {
                             var (t, r) = graph.ShortestRoute(vertices[i], vertices[lastVertex], i, orderId, vTime + timeOffset, constraints, false, true);
-                            if (vTime + t == visitTime) {
+                            if (vTime + t == visitTime && t != 0) {
                                 return (vTime, i, r);
                             }
                         }
@@ -392,9 +393,23 @@ namespace src_cs {
                 throw new Exception();
             }
         }
+        public static void FindMaxValues(Agent[] agents, int maxTime, out int maxClasses, out int maxItems,
+                                         out int maxSolverTime) {
+            int maxOrders = 0;
+            maxClasses = 0;
+            maxItems = 0;
+            foreach (var agent in agents) {
+                maxOrders = maxOrders < agent.orders.Length ? agent.orders.Length : maxOrders;
+                foreach (var order in agent.orders) {
+                    maxClasses = maxClasses < order.classes[^1] ? order.classes[^1] : maxClasses;
+                    maxItems = maxItems < order.vertices.Length ? order.vertices.Length : maxItems;
+                }
+            }
+            maxSolverTime = maxTime / maxOrders;
+        }
     }
 
-    public class Tour {
+    public sealed class Tour {
         public int cost;
         public int startTime;
         public int[] tourVertices;
@@ -413,6 +428,6 @@ namespace src_cs {
             sol.Add(solution.ElementAt(solution.Count - 1).Item2);
             this.tourVertices = sol.ToArray();
             this.cost = tourVertices.Length;
-        }
+        }        
     }
 }

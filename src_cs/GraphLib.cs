@@ -17,7 +17,7 @@ namespace src_cs {
         }
     }
 
-    public class StorageVertex : Vertex {
+    public sealed class StorageVertex : Vertex {
         public int[,] itemsLeft;
         public int[,] itemsRight;
 
@@ -27,7 +27,7 @@ namespace src_cs {
         }
     }
 
-    public class Edge {
+    public sealed class Edge {
         public int x;
         public int y;
         public int cost;
@@ -39,7 +39,7 @@ namespace src_cs {
         }
     }
 
-    public class Graph {
+    public sealed class Graph {
         private int[][] distancesCache;
         private int[][][] routesCache;
         private AStarNode[] queueCacheA;
@@ -153,11 +153,11 @@ namespace src_cs {
         /// <param name="reverseSearch">Find backwards route if true.</param>
         /// <returns></returns>
         public (int, int[]) ShortestRoute(int pickVertex, int target, int itemId, int orderId, int realTime, SortedList<int, List<int>> constraints,
-            bool reverseSearch, bool returnPath) {            
+            bool reverseSearch, bool returnPath) {
             int pickTime = orders[orderId].pickTimes[itemId];
             (int, int[]) route = (distancesCache[pickVertex][target] + pickTime, routesCache[pickVertex][target]);
             int maxTime = reverseSearch ? realTime : realTime + route.Item1;
-            int minTime = reverseSearch ? realTime - route.Item1 : realTime;            
+            int minTime = reverseSearch ? realTime - route.Item1 : realTime;
 
 
             if (constraints != null && minTime >= 0) {
@@ -165,9 +165,17 @@ namespace src_cs {
                     if (time >= minTime && time <= maxTime) {
                         int relativeTime = time - minTime;
                         for (int i = 0; i < constraints[time].Count; i++) {
-                            if (relativeTime < pickTime && pickVertex == constraints[time][i] ||
-                                (relativeTime >= pickTime && route.Item2[relativeTime-pickTime] == constraints[time][i])) {
-                                route = AStar(pickVertex, target, constraints, realTime + pickTime, reverseSearch);
+                            // Cannot pick at the vertex
+                            if (relativeTime <= pickTime && pickVertex == constraints[time][i]) {                                
+                                    return (0, null);
+                            }
+                            else if (relativeTime > pickTime && route.Item2[relativeTime - pickTime] == constraints[time][i]) {
+                                if (reverseSearch) {
+                                    route = AStar(pickVertex, target, constraints, realTime, reverseSearch);
+                                }
+                                else {
+                                    route = AStar(pickVertex, target, constraints, realTime + pickTime, reverseSearch);
+                                }
                                 route.Item1 += pickTime;
                                 if (returnPath)
                                     return (route.Item1, RouteWithPickVertices());
@@ -190,7 +198,7 @@ namespace src_cs {
                 for (int i = 0; i < pickTime; i++) {
                     result[i] = pickVertex;
                 }
-                for (int i = pickTime; i < route.Item2.Length+pickTime; i++) {
+                for (int i = pickTime; i < route.Item2.Length + pickTime; i++) {
                     result[i] = route.Item2[i - pickTime];
                 }
                 return result;
@@ -221,7 +229,7 @@ namespace src_cs {
                     }
                     if (reverseSearch)
                         ReverseRoute(result);
-                   CleanUpQueueCache();
+                    CleanUpQueueCache();
                     return (currRouteCost, result);
                 }
 
@@ -249,8 +257,19 @@ namespace src_cs {
                     int neighborIdx = neighbor.x == currNode.index ? neighbor.y : neighbor.x;
 
                     // No return edges.
-                    if (currNode.predecessor != null && neighborIdx == currNode.predecessor.index)
-                        continue;
+                    if (currNode.predecessor != null) {
+                        if (neighborIdx == currNode.predecessor.index) {
+                            continue;
+                        }
+                        else if (currNode.predecessor.index == currNode.index) {
+                            var tmp = currNode.predecessor;
+                            while (tmp.predecessor != null && tmp.index == currNode.index) {
+                                tmp = tmp.predecessor;
+                            }
+                            if (tmp.index == neighborIdx)
+                                continue;
+                        }
+                    }
 
                     heuristicCost = neighborRouteCost + distancesCache[neighborIdx][y];
 
@@ -275,8 +294,8 @@ namespace src_cs {
                 //                    - of routes with the same optimal cost the one furthest from beginnig is preferred
                 float newCost = (heuristicCost << 10) - routeCost;
 
-                if (nextNode != null) {               // update value if better cost                
-                    if (nextNode.routeCost > routeCost) {
+                if (nextNode != null) {               // update value if better cost and node is not requeued already             
+                    if (nextNode.routeCost > routeCost && nextNode.index != nextNode.predecessor.index) {
                         nextNode.routeCost = routeCost;
                         nextNode.predecessor = prevNode;
                         queue.UpdatePriority(nextNode, newCost);
