@@ -42,17 +42,23 @@ namespace src_cs {
     public sealed class Graph {
         private int[][] distancesCache;
         private int[][][] routesCache;
+        private int[][][] pickTimesCache;
         private AStarNode[] queueCacheA;
         private AStarNode[] emptyArr;
         private AStarNodeFactory nodeFactory;
         private FastPriorityQueue<AStarNode> aStarQueue;
+
         public List<Vertex> vertices;
         public List<Edge> edges;
-        public Order[] orders;
+        // public Order[] orders;
 
         public Graph() {
             this.vertices = new List<Vertex>();
             this.edges = new List<Edge>();
+        }
+
+        public Graph(Location[,] grid, List<StorageRack> storage) : this() {
+            // Go through the grid and add Edges and Vertices
         }
 
         public void AddNode(Vertex vertex) {
@@ -72,6 +78,8 @@ namespace src_cs {
             queueCacheA = new AStarNode[vertices.Count];
             emptyArr = new AStarNode[vertices.Count];
 
+
+            /*
             // Init orders
             var tmpOrders = new List<Order>();
             foreach (var agent in agents) {
@@ -80,6 +88,7 @@ namespace src_cs {
                 }
             }
             this.orders = tmpOrders.ToArray();
+            */
 
             // Init cache arrays
             distancesCache = new int[vertices.Count][];
@@ -89,10 +98,9 @@ namespace src_cs {
                 routesCache[i] = new int[this.vertices.Count][];
             }
 
-            InitTourRoutes();
+            //InitTourRoutes();
 
-
-            void InitTourRoutes() {
+            void InitTourRoutes(OrderInstance[] orders) {
                 HashSet<int> verticesUsed = new HashSet<int>();
                 // Init shortest distances for pick destinations
                 Queue<QueueNode> q = new Queue<QueueNode>(vertices.Count);
@@ -134,12 +142,25 @@ namespace src_cs {
         }
 
         public int GetPickTime(int vertex, int position, int height) {
+            /*
             var sVertex = vertices[vertex] as StorageVertex;
             if (position == 0) {
                 return sVertex.itemsLeft[height, 1];
             }
             else {
                 return sVertex.itemsRight[height, 1];
+            }
+            */
+            return PickFormula(height, 120, 4, 120);
+        }
+
+        int PickFormula(int height, int defaultTime, int timePerLevel, int locationSecureTime) {
+            if (height == 0)
+                return defaultTime;
+            else if (height < 3)
+                return timePerLevel * height + defaultTime;
+            else {
+                return timePerLevel * height + defaultTime + locationSecureTime;
             }
         }
 
@@ -152,9 +173,8 @@ namespace src_cs {
         /// <param name="constraints"></param>
         /// <param name="reverseSearch">Find backwards route if true.</param>
         /// <returns></returns>
-        public (int, int[]) ShortestRoute(int pickVertex, int target, int itemId, int orderId, int realTime, SortedList<int, List<int>> constraints,
-            bool reverseSearch, bool returnPath) {
-            int pickTime = orders[orderId].pickTimes[itemId];
+        public (int, int[]) ShortestRoute(int pickVertex, int target, int pickTime, int realTime, SortedList<int, List<int>> constraints,
+            bool reverseSearch, bool returnPath) {            
             (int, int[]) route = (distancesCache[pickVertex][target] + pickTime, routesCache[pickVertex][target]);
             int maxTime = reverseSearch ? realTime : realTime + route.Item1;
             int minTime = reverseSearch ? realTime - route.Item1 : realTime;
@@ -166,8 +186,8 @@ namespace src_cs {
                         int relativeTime = time - minTime;
                         for (int i = 0; i < constraints[time].Count; i++) {
                             // Cannot pick at the vertex
-                            if (relativeTime <= pickTime && pickVertex == constraints[time][i]) {                                
-                                    return (0, null);
+                            if (relativeTime <= pickTime && pickVertex == constraints[time][i]) {
+                                return (0, null);
                             }
                             else if (relativeTime > pickTime && route.Item2[relativeTime - pickTime] == constraints[time][i]) {
                                 if (reverseSearch) {

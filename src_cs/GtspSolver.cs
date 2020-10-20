@@ -242,7 +242,8 @@ namespace src_cs {
             }
         }
 
-        public Tour SolveGTSP(Graph graph, List<Constraint> constraints, Order order, int timeOffset) {
+        // TODO: Start and target vertices are no longer vertices[0] and vertices[1] - patch the method
+        public Tour SolveGTSP(Graph graph, List<Constraint> constraints, OrderInstance order, int timeOffset) {
             Init();
             var sortedList = new SortedList<int, List<int>>();
             for (int i = 0; i < constraints.Count; i++) {
@@ -256,10 +257,11 @@ namespace src_cs {
             return FindShortestTour(graph, sortedList, order, timeOffset);
         }
 
-        public Tour FindShortestTour(Graph graph, SortedList<int, List<int>> constraints, Order order, int timeOffset) {
+        public Tour FindShortestTour(Graph graph, SortedList<int, List<int>> constraints, OrderInstance order, int timeOffset) {
             var vertices = order.vertices;
             var classes = order.classes;
             var orderId = order.orderId;
+            var pickTimes = order.pickTimes;
             var classesCount = classes[^1];
             SetOperations so;
             if (classesCount < 8) {
@@ -272,11 +274,11 @@ namespace src_cs {
             ulong copy = 0;
             ulong uni = 0;
 
-            var beginLoc = vertices[0];
-            var targetLoc = vertices[1];
+            var startLoc = order.startLoc;
+            var targetLoc = order.targetLoc;
             // Init paths from depot.
             for (int i = 2; i < vertices.Length; i++) {
-                var (time, r) = graph.ShortestRoute(beginLoc, vertices[i], 0, orderId, timeOffset, constraints, false, false);
+                var (time, r) = graph.ShortestRoute(startLoc, vertices[i], pickTimes[i], timeOffset, constraints, false, false);
                 if (time == 0) continue;
                 timeDistances[i][time] = 1;
                 sets[i][time][0] = 1;
@@ -293,7 +295,7 @@ namespace src_cs {
 
                     // Check, whether to add vertex into potential second to last on shortest path
                     if (so.IsComplete(sets[i][time])) {
-                        var (t, r) = graph.ShortestRoute(vertices[i], targetLoc, i, orderId, time + timeOffset, constraints, false, true);
+                        var (t, r) = graph.ShortestRoute(vertices[i], targetLoc, pickTimes[i], time + timeOffset, constraints, false, true);
                         if (t == 0) continue;
                             int finishTime = time + t;
                         if (tMax > finishTime) {
@@ -305,7 +307,7 @@ namespace src_cs {
                     for (int j = 2; j < vertices.Length; j++) {
                         int vertexClass_1 = classes[j];
                         if (vertexClass_0 == vertexClass_1) continue;
-                        var (pickTime, r) = graph.ShortestRoute(vertices[i], vertices[j], i, orderId, time + timeOffset, constraints, false, false);
+                        var (pickTime, r) = graph.ShortestRoute(vertices[i], vertices[j], pickTimes[i], time + timeOffset, constraints, false, false);
                         if (pickTime == 0) continue;
                         if (time + pickTime < timeLimit) {
                             timeDistances[j][time + pickTime] = 1;
@@ -340,7 +342,7 @@ namespace src_cs {
                     int vClass = classes[i];
                     //int pickTime = order.pickTimes[i];
                     if (unvisitedClasses[vClass] == 0) continue;
-                    var (t, r) = graph.ShortestRoute(vertices[i], vertices[lastVertex], i, orderId, visitTime + timeOffset, constraints, true, true);
+                    var (t, r) = graph.ShortestRoute(vertices[i], vertices[lastVertex], pickTimes[i], visitTime + timeOffset, constraints, true, true);
                     if (t == 0) continue;
                     int vTime = visitTime - t;
                     if (vTime < 0) continue;
@@ -358,11 +360,11 @@ namespace src_cs {
                         break;
                     }
                 }
-                if (allZero) {
-                    var (t1, r1) = graph.ShortestRoute(beginLoc, vertices[lastVertex], 0, orderId, visitTime + timeOffset, constraints, true, true);
+                if (allZero) {                                                  // TODO: pickTimes[0] was pick time of start location
+                    var (t1, r1) = graph.ShortestRoute(startLoc, vertices[lastVertex], pickTimes[0], visitTime + timeOffset, constraints, true, true);
                     if (visitTime - t1 == 0 && t1 != 0)
                         return (0, 0, r1);
-                    (t1, r1) = graph.ShortestRoute(beginLoc, vertices[lastVertex], 0, orderId, 0+timeOffset, constraints, false, true);
+                    (t1, r1) = graph.ShortestRoute(startLoc, vertices[lastVertex], pickTimes[0], 0+timeOffset, constraints, false, true);
 #if DEBUG
                     if (visitTime - t1 != 0)
                         throw new Exception("Route beginning time is not correct.");
@@ -382,7 +384,7 @@ namespace src_cs {
                         if (vTime < 0) continue;
                         ulong[] originSet = sets[i][vTime];
                         if (so.SearchSubset(originSet, unvisitedClasses)) {
-                            var (t, r) = graph.ShortestRoute(vertices[i], vertices[lastVertex], i, orderId, vTime + timeOffset, constraints, false, true);
+                            var (t, r) = graph.ShortestRoute(vertices[i], vertices[lastVertex], pickTimes[i], vTime + timeOffset, constraints, false, true);
                             if (vTime + t == visitTime && t != 0) {
                                 return (vTime, i, r);
                             }

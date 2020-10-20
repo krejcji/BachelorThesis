@@ -4,7 +4,7 @@ using System.Diagnostics;
 
 namespace src_cs {
     class PrioritizedPlanner {
-        WarehouseInstance instance;
+        WarehouseInstanceOld instance;
         GTSPSolver solver;
         int maxTime;
         int[][] solutions;
@@ -12,7 +12,7 @@ namespace src_cs {
         private List<int>[] nodesVisitors1;
         private readonly int[] zero;
 
-        public PrioritizedPlanner(WarehouseInstance instance, int maxTime) {
+        public PrioritizedPlanner(WarehouseInstanceOld instance, int maxTime) {
             this.maxTime = maxTime;
             this.instance = instance;
             this.solutions = new int[instance.agents.Length][];

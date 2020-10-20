@@ -8,7 +8,9 @@ using System.Runtime.Intrinsics;
 namespace src_cs {
 class WarehousePathFinder {
         static void Main(string[] args) {
-            WarehouseInstance wi = InstanceParser.Parse("../../../../../data/whole_instance.txt");
+            var wi1 = InstanceGenerator.GenerateInstance(5, 3, 10, 5, 60, 5, false);
+            var wi2 = InstanceParser.Parse2("../../../../../data/test_warehouse.txt");
+            WarehouseInstanceOld wi = InstanceParser.Parse("../../../../../data/whole_instance.txt");
             // sw.Start();          
             PrioritizedPlanner pp = new PrioritizedPlanner(wi, 1000);
             var tours = pp.FindTours();
@@ -34,16 +36,18 @@ class WarehousePathFinder {
 }
 
 public class Agent {
-    public Order[] orders;
+    public OrderInstance[] orders;
     public int index;
 
-    public Agent(Order[] orders, int idx) {
+    public Agent(OrderInstance[] orders, int idx) {
         this.index = idx;
         this.orders = orders;
     }
 }
 
-public class Order {
+public class OrderInstance {
+    public int startLoc;
+    public int targetLoc;
     public int orderId;
     public int[] vertices;
     public int[][] positions; //[left/right, height]
@@ -51,20 +55,14 @@ public class Order {
     public int[] pickTimes;
 
 
-    public Order(int orderId, List<List<(int, int, int)>> orderItems, int source, int target, Graph graph) {
+    public OrderInstance(int orderId, List<List<(int, int, int)>> orderItems, int startLoc, int targetLoc, Graph graph) {
         this.orderId = orderId;
+        this.startLoc = startLoc;
+        this.targetLoc = targetLoc;
         List<int> vertices = new List<int>();
         List<int[]> positions = new List<int[]>();
         List<int> classes = new List<int>();
-        List<int> pickTimes = new List<int>();
-        vertices.Add(source);
-        positions.Add(new int[] { 0, 0 });
-        pickTimes.Add(0);
-        classes.Add(0);
-        vertices.Add(target);
-        positions.Add(new int[] { 0, 0 });
-        pickTimes.Add(0);
-        classes.Add(0);
+        List<int> pickTimes = new List<int>();        
 
         for (int i = 0; i < orderItems.Count; i++) {
             for (int j = 0; j < orderItems[i].Count; j++) {

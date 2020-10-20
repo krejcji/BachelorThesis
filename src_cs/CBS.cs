@@ -8,7 +8,7 @@ namespace src_cs {
         private List<int>[] nodesVisitors1;
         private readonly int[] zero;
         private readonly byte[] zeroNodes;
-        private readonly WarehouseInstance instance;
+        private readonly WarehouseInstanceOld instance;
         private readonly GTSPSolver solver;
         private readonly int maxTime;
         int[][] solutions;
@@ -38,7 +38,7 @@ namespace src_cs {
             return null;
         }
 
-        public CBS(WarehouseInstance instance, int maxTime) {
+        public CBS(WarehouseInstanceOld instance, int maxTime) {
             this.maxTime = maxTime;
             this.instance = instance;
             this.zeroNodes = new byte[instance.graph.vertices.Count];

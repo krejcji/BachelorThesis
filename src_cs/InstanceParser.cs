@@ -1,21 +1,23 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Runtime.CompilerServices;
+using System.Security.Cryptography.X509Certificates;
 
 namespace src_cs {
-    public class WarehouseInstance {
+    public class WarehouseInstanceOld {
         public Graph graph;
         public Agent[] agents;
 
-        public WarehouseInstance(Graph graph, Agent[] agents) {
+        public WarehouseInstanceOld(Graph graph, Agent[] agents) {
             this.graph = graph;
             this.agents = agents;
             graph.Initialize(agents);
         }
-    }
+    }    
 
     class InstanceParser {
-        public static WarehouseInstance Parse(string instancePath) {
+        public static WarehouseInstanceOld Parse(string instancePath) {
             StreamReader file = new StreamReader(instancePath);
             Graph graph = new Graph();
             Dictionary<string, int> verticesIndices = new Dictionary<string, int>();
@@ -73,7 +75,7 @@ namespace src_cs {
             for (int i = 0; i < agentsCount; i++) {
                 tokens = file.ReadLine().Split();
                 int ordersCount = int.Parse(tokens[3]);
-                var ordersList = new List<Order>();
+                var ordersList = new List<OrderInstance>();
 
                 for (int j = 0; j < ordersCount; j++) {
                     var orderItems = new List<List<(int, int, int)>>();
@@ -93,11 +95,84 @@ namespace src_cs {
                             orderItems[k].Add((vertexId, loc, height));
                         }
                     }                    
-                    ordersList.Add(new Order(orderId++, orderItems, source, target, graph));
+                    ordersList.Add(new OrderInstance(orderId++, orderItems, source, target, graph));
                 }
                 agents.Add(new Agent(ordersList.ToArray(), i));
             }
-            return new WarehouseInstance(graph, agents.ToArray());
+            return new WarehouseInstanceOld(graph, agents.ToArray());
+        }
+
+        public static WarehouseInstance Parse2(string instancePath) {
+            StreamReader file = new StreamReader(instancePath);
+            string line;
+            string[] tokens;
+
+            line = file.ReadLine();
+            if (line.Substring(0,10) != "Dimension:")
+                throw new FormatException("File format not by the specification.");
+            tokens = line.Split(':')[1].Split(',', StringSplitOptions.RemoveEmptyEntries);
+            int x, y, z = 0;
+            x = int.Parse(tokens[0]);
+            y = int.Parse(tokens[1]);
+            z = int.Parse(tokens[2]) + 1;
+
+            if ((line = file.ReadLine()) != "LOCATIONmaster")
+                throw new FormatException("File format not by the specification.");            
+
+            Tuple<string, string, string, string, string>[,,] grid = new Tuple<string, string, string, string, string>[x,y,z];
+            file.ReadLine();
+            
+            while ((line = file.ReadLine()) != "") {
+                tokens = line.Split(',');
+                var x_coord = int.Parse(tokens[0]) - 1;
+                var y_coord = int.Parse(tokens[1]) - 1;
+                var z_coord = int.Parse(tokens[2]);
+
+                List<string> values = new List<string>();
+                for (int i = 3; i < tokens.Length; i++) {
+                    values.Add(tokens[i]);                    
+                }
+                grid[x_coord, y_coord, z_coord] = new Tuple<string, string, string, string, string>(
+                                                         values[0], values[1], values[2],
+                                                         values[3], values[4]);
+            }
+
+            if (line != "ITEMmaster")
+                throw new FormatException("File format not by the specification.");
+            file.ReadLine();
+            List<Tuple<string, string, string>> items = new List<Tuple<string, string, string>>();
+
+            while ((line = file.ReadLine()) != "") {
+                tokens = line.Split(',');
+                items.Add(new Tuple<string, string, string>(tokens[0], tokens[1], tokens[2]));
+            }
+
+            if (line != "Inventory balance")
+                throw new FormatException("File format not by the specification.");
+            file.ReadLine();
+            string date = null;
+
+            while ((line = file.ReadLine()) != "") {
+                if (line[0] == '*') {
+                    date = line;
+                    continue;
+                }
+            }
+
+            if (line != "Orders")
+                throw new FormatException("File format not by the specification.");
+            file.ReadLine();
+            Dictionary<int, List<Tuple<string, string, int>>> orders = new Dictionary<int, List<Tuple<string, string, int>>>();
+
+            while ((line = file.ReadLine()) != "") {
+                tokens = line.Split(',');
+                int orderId = int.Parse(tokens[0]);
+                if (!orders.ContainsKey(orderId))
+                    orders.Add(orderId, new List<Tuple<string, string, int>>());
+                orders[orderId].Add(new Tuple<string, string, int>(tokens[1], tokens[2], int.Parse(tokens[3])));
+            }
+
+            return null;
         }
     }
 }
