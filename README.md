@@ -2,6 +2,23 @@
 
 ## Progress report
 
+TBD: 
+
+* Dokončení základní funkcionality generace instancí a načítání dat z Excelu
+* Vytvoření jednoduchého testovacího frameworku
+* Refaktorizace staršího kódu aby bylo možné algoritmy jednoduše otestovat
+
+**20.10.**
+
+* Přepsání generování instancí do C# pro zefektivnění budoucích testů
+  * zatím pouze základní parametrizace dle velikosti, do budoucna složitější
+* Serializace Excelových instancí do souboru, parsing v jazyce C#
+
+**14.10.**
+
+* Refactoring
+* Parsing Excel souborů a výběr důležitých dat pro projekt
+
 #### 8.7
 
 * Práce na textu - 3. kapitola
