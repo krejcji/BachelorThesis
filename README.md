@@ -2,11 +2,13 @@
 
 ## Progress report
 
-TBD: 
 
-* Dokončení základní funkcionality generace instancí a načítání dat z Excelu
-* Vytvoření jednoduchého testovacího frameworku
-* Refaktorizace staršího kódu aby bylo možné algoritmy jednoduše otestovat
+
+**4.11.**
+
+* První funkční verze generování instancí v C# a návrh parametrizace
+* Implementována kostra testovacího frameworku
+* Změny architektury
 
 **20.10.**
 
