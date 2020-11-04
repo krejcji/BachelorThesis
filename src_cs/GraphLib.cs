@@ -1,15 +1,23 @@
 ﻿using Priority_Queue;
 using System;
+using System.Drawing;
 using System.Collections.Generic;
 
 namespace src_cs {
     public class Vertex {
         public int index;
+        public Point coordinates;
         public List<Edge> edges;
 
         public Vertex(int index) {
             this.index = index;
             this.edges = new List<Edge>();
+        }
+
+        public Vertex(int index, Point coordinates) {
+            this.index = index;
+            this.edges = new List<Edge>();
+            this.coordinates = coordinates;
         }
 
         public void AddEdge(Edge edge) {
@@ -21,7 +29,7 @@ namespace src_cs {
         public int[,] itemsLeft;
         public int[,] itemsRight;
 
-        public StorageVertex(int index, int[,] left, int[,] right) : base(index) {
+        public StorageVertex(int index, int[,] left, int[,] right, Point coord) : base(index, coord) {
             this.itemsLeft = left;
             this.itemsRight = right;
         }
@@ -57,11 +65,32 @@ namespace src_cs {
             this.edges = new List<Edge>();
         }
 
-        public Graph(Location[,] grid, List<StorageRack> storage) : this() {
+        public Graph(Vertex[,] grid) : this() {
             // Go through the grid and add Edges and Vertices
+            for (int i = 0; i < grid.GetLength(0); i++) {
+                for (int j = 0; j < grid.GetLength(1); j++) {
+                    if (grid[i, j] == null)
+                        continue;
+                    var vertex = grid[i, j];
+                    vertices.Add(vertex);
+
+                    if (i != 0) {
+                        if (grid[i - 1, j] != null) {
+                            Edge e = new Edge(grid[i - 1, j].index, vertex.index, 1);
+                            AddEdge(e);
+                        }
+                    }
+                    if (j!=0) {
+                        if(grid[i,j-1] != null) {
+                            Edge e = new Edge(grid[i, j-1].index, vertex.index, 1);
+                            AddEdge(e);
+                        }
+                    }
+                }
+            }
         }
 
-        public void AddNode(Vertex vertex) {
+        public void AddVertex(Vertex vertex) {
             vertex.index = vertices.Count;
             vertices.Add(vertex);
         }
@@ -72,23 +101,11 @@ namespace src_cs {
             vertices[edge.y].AddEdge(edge);
         }
 
-        public void Initialize(Agent[] agents) {
+        public void Initialize(OrderInstance[][] orderInstances) {
             aStarQueue = new FastPriorityQueue<AStarNode>(2 * vertices.Count);
             nodeFactory = new AStarNodeFactory(2 * vertices.Count);
             queueCacheA = new AStarNode[vertices.Count];
-            emptyArr = new AStarNode[vertices.Count];
-
-
-            /*
-            // Init orders
-            var tmpOrders = new List<Order>();
-            foreach (var agent in agents) {
-                foreach (var order in agent.orders) {
-                    tmpOrders.Add(order);
-                }
-            }
-            this.orders = tmpOrders.ToArray();
-            */
+            emptyArr = new AStarNode[vertices.Count];            
 
             // Init cache arrays
             distancesCache = new int[vertices.Count][];
@@ -98,17 +115,28 @@ namespace src_cs {
                 routesCache[i] = new int[this.vertices.Count][];
             }
 
-            //InitTourRoutes();
+            InitTourRoutes(orderInstances);
 
-            void InitTourRoutes(OrderInstance[] orders) {
+            void InitTourRoutes(OrderInstance[][] orders) {
                 HashSet<int> verticesUsed = new HashSet<int>();
+                int[][][] orderVertices = new int[orders.Length][][];
                 // Init shortest distances for pick destinations
                 Queue<QueueNode> q = new Queue<QueueNode>(vertices.Count);
-                foreach (var order in orders) {
-                    for (int i = 0; i < order.vertices.Length; i++) {
-                        verticesUsed.Add(order.vertices[i]);
+                for (int i = 0; i < orders.Length; i++) {
+                    orderVertices[i] = new int[orders[i].Length][];
+                    for (int j = 0; j < orders[i].Length; j++) {
+                        orderVertices[i][j] = new int[orders[i][j].vertices.Length + 2];
+                        verticesUsed.Add(orders[i][j].startLoc);
+                        verticesUsed.Add(orders[i][j].targetLoc);
+                        orderVertices[i][j][0] = orders[i][j].startLoc;
+                        orderVertices[i][j][1] = orders[i][j].targetLoc;
+                        for (int k = 0; k < orders[i][j].vertices.Length; k++) {
+                            verticesUsed.Add(orders[i][j].vertices[k]);
+                            orderVertices[i][j][k + 2] = orders[i][j].vertices[k];
+                        }
                     }
                 }
+                
                 foreach (var vertex in verticesUsed) {
                     BFS(q, vertex);
                 }
@@ -119,21 +147,23 @@ namespace src_cs {
                 }
 
                 // For each order, calculate one shortest route.
-                foreach (var order in orders) {
-                    var vertices = order.vertices;
+                foreach (var agent in orderVertices) {
+                    foreach (var order in agent) {
+                        var vertices = order;
 
-                    // Cache distance between each pair or items.
-                    for (int j = 0; j < vertices.Length; j++) {
-                        for (int k = 0; k < vertices.Length; k++) {
-                            if (j < k) {
-                                if (routesCache[vertices[j]][vertices[k]] != null) continue;
-                                var (distance, route) = AStar(vertices[j], vertices[k], null, 0, false);
-                                routesCache[vertices[j]][vertices[k]] = route;
-                                var reverseRoute = new int[route.Length];
-                                for (int i = 0; i < route.Length; i++) {
-                                    reverseRoute[route.Length - i - 1] = route[i];
+                        // Cache distance between each pair or items.
+                        for (int j = 0; j < vertices.Length; j++) {
+                            for (int k = 0; k < vertices.Length; k++) {
+                                if (j < k) {
+                                    if (routesCache[vertices[j]][vertices[k]] != null) continue;
+                                    var (distance, route) = AStar(vertices[j], vertices[k], null, 0, false);
+                                    routesCache[vertices[j]][vertices[k]] = route;
+                                    var reverseRoute = new int[route.Length];
+                                    for (int i = 0; i < route.Length; i++) {
+                                        reverseRoute[route.Length - i - 1] = route[i];
+                                    }
+                                    routesCache[vertices[k]][vertices[j]] = reverseRoute;
                                 }
-                                routesCache[vertices[k]][vertices[j]] = reverseRoute;
                             }
                         }
                     }
@@ -152,6 +182,14 @@ namespace src_cs {
             }
             */
             return PickFormula(height, 120, 4, 120);
+        }
+
+        public Vertex FindLocation(Point coord) {            
+            foreach (var vertex in vertices) {                
+                if (vertex.coordinates == coord)
+                    return vertex;
+            }
+            return null;
         }
 
         int PickFormula(int height, int defaultTime, int timePerLevel, int locationSecureTime) {

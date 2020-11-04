@@ -258,6 +258,8 @@ namespace src_cs {
         }
 
         public Tour FindShortestTour(Graph graph, SortedList<int, List<int>> constraints, OrderInstance order, int timeOffset) {
+            var startLoc = order.startLoc;
+            var targetLoc = order.targetLoc;
             var vertices = order.vertices;
             var classes = order.classes;
             var orderId = order.orderId;
@@ -273,12 +275,10 @@ namespace src_cs {
 
             ulong copy = 0;
             ulong uni = 0;
-
-            var startLoc = order.startLoc;
-            var targetLoc = order.targetLoc;
-            // Init paths from depot.
-            for (int i = 2; i < vertices.Length; i++) {
-                var (time, r) = graph.ShortestRoute(startLoc, vertices[i], pickTimes[i], timeOffset, constraints, false, false);
+            
+            // Init paths from start location.
+            for (int i = 0; i < vertices.Length; i++) {
+                var (time, r) = graph.ShortestRoute(startLoc, vertices[i], 0, timeOffset, constraints, false, false);
                 if (time == 0) continue;
                 timeDistances[i][time] = 1;
                 sets[i][time][0] = 1;
@@ -287,7 +287,7 @@ namespace src_cs {
             int tMax = timeLimit;
             // Find shortest tour
             for (int time = 0; time < timeLimit && time < tMax; time++) {
-                for (int i = 2; i < vertices.Length; i++) {
+                for (int i = 0; i < vertices.Length; i++) {
                     if (timeDistances[i][time] == 0) continue;
                     int vertexClass_0 = classes[i];
                     so.FilterElement(sets[i][time], vertexClass_0);
@@ -304,7 +304,7 @@ namespace src_cs {
                         }                        
                     }
 
-                    for (int j = 2; j < vertices.Length; j++) {
+                    for (int j = 0; j < vertices.Length; j++) {
                         int vertexClass_1 = classes[j];
                         if (vertexClass_0 == vertexClass_1) continue;
                         var (pickTime, r) = graph.ShortestRoute(vertices[i], vertices[j], pickTimes[i], time + timeOffset, constraints, false, false);
@@ -323,12 +323,12 @@ namespace src_cs {
             solution.AddFirst((bestSol.Item2, bestSol.Item3, bestSol.Item4));
             int lastClass = classes[bestSol.Item3];
             int[] classesLeft = new int[classes[^1] + 1];
-            for (int i = 0; i < classesLeft.Length; i++) {
+            for (int i = 1; i < classesLeft.Length; i++) {
                 if (i != lastClass)
                     classesLeft[i] = i;
             }
             var shortestRoutesBck = new int[vertices.Length];
-            for (int i = 0; i < classesLeft.Length - 1; i++) {
+            for (int i = 0; i < classesLeft.Length-1; i++) {  
                 (int, int, int[]) currVertex = solution.First.Value;
                 (int, int, int[]) previous = Backtrack(currVertex.Item1, currVertex.Item2, classesLeft);
                 classesLeft[classes[previous.Item2]] = 0;
@@ -338,7 +338,7 @@ namespace src_cs {
             return new Tour(timeOffset, solution);
 
             (int, int, int[]) Backtrack(int visitTime, int lastVertex, int[] unvisitedClasses) {
-                for (int i = 2; i < vertices.Length; i++) {
+                for (int i = 0; i < vertices.Length; i++) {
                     int vClass = classes[i];
                     //int pickTime = order.pickTimes[i];
                     if (unvisitedClasses[vClass] == 0) continue;
@@ -361,10 +361,10 @@ namespace src_cs {
                     }
                 }
                 if (allZero) {                                                  // TODO: pickTimes[0] was pick time of start location
-                    var (t1, r1) = graph.ShortestRoute(startLoc, vertices[lastVertex], pickTimes[0], visitTime + timeOffset, constraints, true, true);
+                    var (t1, r1) = graph.ShortestRoute(startLoc, vertices[lastVertex], 0, visitTime + timeOffset, constraints, true, true);
                     if (visitTime - t1 == 0 && t1 != 0)
                         return (0, 0, r1);
-                    (t1, r1) = graph.ShortestRoute(startLoc, vertices[lastVertex], pickTimes[0], 0+timeOffset, constraints, false, true);
+                    (t1, r1) = graph.ShortestRoute(startLoc, vertices[lastVertex], 0, 0+timeOffset, constraints, false, true);
 #if DEBUG
                     if (visitTime - t1 != 0)
                         throw new Exception("Route beginning time is not correct.");
@@ -376,7 +376,7 @@ namespace src_cs {
                 // If not found vertex at shortest routes, the route must be longer.
                 int routeExtension = 1;
                 while (routeExtension <= visitTime) {
-                    for (int i = 2; i < vertices.Length; i++) {
+                    for (int i = 0; i < vertices.Length; i++) {
                         if (shortestRoutesBck[i] == 0) continue;
                         int vClass = classes[i];
                         if (unvisitedClasses[vClass] == 0) continue;
@@ -395,19 +395,20 @@ namespace src_cs {
                 throw new Exception();
             }
         }
-        public static void FindMaxValues(Agent[] agents, int maxTime, out int maxClasses, out int maxItems,
+        public static void FindMaxValues(OrderInstance[][] orders, int maxTime, out int maxClasses, out int maxItems,
                                          out int maxSolverTime) {
             int maxOrders = 0;
             maxClasses = 0;
             maxItems = 0;
-            foreach (var agent in agents) {
-                maxOrders = maxOrders < agent.orders.Length ? agent.orders.Length : maxOrders;
-                foreach (var order in agent.orders) {
+            foreach (var agent in orders) {
+                maxOrders = maxOrders < agent.Length ? agent.Length : maxOrders;
+                foreach (var order in agent) {
                     maxClasses = maxClasses < order.classes[^1] ? order.classes[^1] : maxClasses;
                     maxItems = maxItems < order.vertices.Length ? order.vertices.Length : maxItems;
                 }
             }
-            maxSolverTime = maxTime / maxOrders;
+            // maxTime must be greater than the timespan of all orders of agent summed
+            maxSolverTime = maxTime / maxOrders;            
         }
     }
 
