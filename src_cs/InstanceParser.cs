@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Security.Cryptography.X509Certificates;
@@ -12,7 +13,7 @@ namespace src_cs {
         public WarehouseInstanceOld(Graph graph, Agent[] agents) {
             this.graph = graph;
             this.agents = agents;
-            graph.Initialize(agents);
+            //graph.Initialize(agents);
         }
     }    
 
@@ -33,10 +34,10 @@ namespace src_cs {
                 tokens = file.ReadLine().Split();
                 verticesIndices.Add(tokens[1], i);
                 if (tokens[2] == "Steiner") {
-                    graph.AddNode(new Vertex(i));
+                    graph.AddVertex(new Vertex(i));
                 }
                 else if (tokens[2] == "Depot") {
-                    graph.AddNode(new Vertex(i));
+                    graph.AddVertex(new Vertex(i));
                 }
                 else if (tokens[2] == "Shelf") {
                     int[,] left = new int[storageHeight, 2];
@@ -53,7 +54,8 @@ namespace src_cs {
                         right[j, 0] = int.Parse(itemRight[0]);
                         right[j, 1] = int.Parse(itemRight[1]);
                     }
-                    graph.AddNode(new StorageVertex(i, left, right));
+                    // TODO: Point?
+                    graph.AddVertex(new StorageVertex(i, left, right, new Point()));
                 }
             }
 

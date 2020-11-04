@@ -16,11 +16,15 @@ namespace src_cs {
         /// <param name="agents"></param>
         /// <param name="specialArea"></param>
         /// <returns></returns>
-        public static WarehouseInstance GenerateInstance(int aisles, int crossAisles, int aisleRows, int storageLevels,
-                                                   int items, int agents, bool specialArea) {
+        public static WarehouseInstance GenerateInstance(InstanceDescription instanceDescriptoon, int seed) {
+            var rand = new Random(seed);
+            var layout = instanceDescriptoon.layout;
+            var storageDesc = instanceDescriptoon.storageDescription;
+            var orderDesc = instanceDescriptoon.ordersDescription;            
+
             // Generate the grid
-            int width = 3 * aisles - 2;
-            int height = 2 * crossAisles + (crossAisles - 1) * aisleRows + 6;
+            int width = 3 * layout.aisles - 2;
+            int height = 2 * layout.crossAisles + (layout.crossAisles - 1) * layout.aisleRows + 6;
             Location[,] grid = new Location[width, height];
             List<StorageRack> storage = new List<StorageRack>();
             for (int i = 0; i < width; i++) {
@@ -32,7 +36,7 @@ namespace src_cs {
                         grid[i, j] = new StagingArea();
                     }
                     else {
-                        var rack = new StorageRack(storageLevels);
+                        var rack = new StorageRack(storageDesc.storageLevels);
                         grid[i, j] = rack;
                         storage.Add(rack);
                     }
@@ -40,29 +44,31 @@ namespace src_cs {
             }
 
             // Fill the empty shelves randomly, more advanced methods will be implemented
-            var rand = new Random();
-            var itemsList = GenerateRandomItems(items, storage.Count * storageLevels, rand);
-            int itemsIdx = 0;
-            foreach (var rack in storage) {
-                for (int j = 0; j < storageLevels; j++) {
-                    rack.items.Add(itemsList[itemsIdx++]);
+            if (storageDesc.randomizedPlacement) {                
+                var itemsList = GenerateRandomItems(storageDesc.uniqueItems, storage.Count * storageDesc.storageLevels, rand);
+                int itemsIdx = 0;
+                foreach (var rack in storage) {
+                    for (int j = 0; j < storageDesc.storageLevels; j++) {
+                        rack.items.Add(itemsList[itemsIdx++]);
+                    }
                 }
+            }
+            else {
+                // TODO:
             }
 
             // Generate orders
-            var orders = GenerateRandomOrders(agents, 8, 3, items, 3, rand);
+            var orders = GenerateRandomOrders(orderDesc.agents, 8, 3, storageDesc.uniqueItems, 3, rand);
 
-            // Make WarehouseInstace2 - graph and full order objects
+            return new WarehouseInstance(grid, storage, orders);
 
-
-            return null;
 
             bool isFloor(int x, int y) {
                 return x % 3 == 0 ||
                     y == 0 ||
                     y == height - 1 ||
-                    (y - 3) % (aisleRows + 2) == 0 ||
-                    (y - 3) % (aisleRows + 2) == 1;
+                    (y - 3) % (layout.aisleRows + 2) == 0 ||
+                    (y - 3) % (layout.aisleRows + 2) == 1;
             }
 
             bool isStaging(int x, int y) {
@@ -94,7 +100,7 @@ namespace src_cs {
                 for (int j = 0; j < orders[i].Length; j++) {
                     int orderLength = rand.Next(averageItems - variability, averageItems + variability + 1);
                     int[] items = new int[orderLength];
-                    orders[i][j] = new Order(new Point(2*i, 3), new Point(2*i, 2), items);
+                    orders[i][j] = new Order(new Point(2*i, 2), new Point(2*i, 2), items);
                     for (int k = 0; k < orderLength; k++) {
                         while (true) {
                             int item = rand.Next(uniqueItems);
