@@ -4,24 +4,37 @@ using System.Collections.Generic;
 
 namespace src_cs {
     class CBS {
-        private List<int>[] nodesVisitors0;
-        private List<int>[] nodesVisitors1;
-        private readonly int[] zero;
-        private readonly byte[] zeroNodes;
-        private readonly WarehouseInstanceOld instance;
-        private readonly GTSPSolver solver;
-        private readonly int maxTime;
-        int[][] solutions;
 
-        public Tour[][] FindTours() {
-            var queue = new FastPriorityQueue<CBSNode>(instance.agents.Length * 200);
-            var root = new CBSNode(instance.agents);
+        public static Tour[][] FindTours(WarehouseInstance instance) {
+            int maxTime = 16000;
+            int agents = instance.AgentCount;
+            List<int>[] nodesVisitors0 = new List<int>[instance.graph.vertices.Count];
+            List<int>[] nodesVisitors1 = new List<int>[instance.graph.vertices.Count];
+            for (int i = 0; i < nodesVisitors0.Length; i++) {
+                nodesVisitors0[i] = new List<int>();
+                nodesVisitors1[i] = new List<int>();
+            }
+
+            GTSPSolver.FindMaxValues(instance.orders, maxTime, out int maxClasses,
+                out int maxItems, out int maxSolverTime);
+            GTSPSolver solver = new GTSPSolver(maxClasses, maxItems, maxSolverTime);
+            int[][] solutions = new int[agents][];
+            for (int i = 0; i < agents; i++) {
+                solutions[i] = new int[maxTime];
+            }
+
+            // Init - old constructor
+            var zeroNodes = new byte[instance.graph.vertices.Count];
+            var zero = new int[maxTime];
+            var queue = new FastPriorityQueue<CBSNode>(agents * 200);
+            var root = new CBSNode(instance.orders);
             root.CalculateInitRoutes(instance.graph, solver);
             queue.Enqueue(root, root.cost);
 
             while (queue.Count != 0) {
                 var currNode = queue.Dequeue();
-                var foundConflict = FindConflicts(currNode.solution, out var conflict);
+                var foundConflict = FindConflicts(currNode.solution, out var conflict, nodesVisitors0, nodesVisitors1,
+                    zero, solutions, agents, maxTime);
                 if (!foundConflict) {
                     Console.WriteLine("Found solution.");
                     return currNode.solution;
@@ -38,28 +51,14 @@ namespace src_cs {
             return null;
         }
 
-        public CBS(WarehouseInstanceOld instance, int maxTime) {
-            this.maxTime = maxTime;
-            this.instance = instance;
-            this.zeroNodes = new byte[instance.graph.vertices.Count];
-            this.zero = new int[maxTime];
-            this.solutions = new int[instance.agents.Length][];
-            this.nodesVisitors0 = new List<int>[instance.graph.vertices.Count];
-            this.nodesVisitors1 = new List<int>[instance.graph.vertices.Count];
-            for (int i = 0; i < nodesVisitors0.Length; i++) {
-                nodesVisitors0[i] = new List<int>();
-                nodesVisitors1[i] = new List<int>();
-            }
-            for (int i = 0; i < instance.agents.Length; i++) {
-                solutions[i] = new int[maxTime];
-            }
 
-            GTSPSolver.FindMaxValues(instance.agents, maxTime, out int maxClasses,
-                out int maxItems, out int maxSolverTime);
-            this.solver = new GTSPSolver(maxClasses, maxItems, maxSolverTime);
+
+        public CBS(WarehouseInstanceOld instance, int maxTime) {
+
         }
 
-        public bool FindConflicts(Tour[][] tours, out Conflict conflict) {
+        public static bool FindConflicts(Tour[][] tours, out Conflict conflict, List<int>[] nodesVisitors0,
+            List<int>[] nodesVisitors1, int[] zero, int[][] solutions, int agents, int maxTime) {
             bool foundConflict = false;
             conflict = new Conflict();
             for (int i = 0; i < tours.Length; i++) {
@@ -69,14 +68,14 @@ namespace src_cs {
             }
 
             // Add agent indicies into visited vertices at 0 timestep
-            for (int j = 0; j < instance.agents.Length; j++) {
+            for (int j = 0; j < agents; j++) {
                 if (solutions[j][0] == 0) continue;  // Depot/default value can be occupied by more agents
                 nodesVisitors0[solutions[j][0]].Add(j);
             }
 
             for (int i = 0; i < maxTime - 1; i++) {
                 // Look for vertex conflicts.
-                for (int j = 0; j < instance.agents.Length; j++) {
+                for (int j = 0; j < agents; j++) {
                     if (nodesVisitors0[solutions[j][i]].Count > 1) {
                         if (solutions[j][i] == 0) continue;
 
@@ -92,18 +91,18 @@ namespace src_cs {
                 // Look for edge conflicts.
                 // Fill in t+1 used vertices.
                 if (i == maxTime - 1) continue;
-                for (int j = 0; j < instance.agents.Length; j++) {
+                for (int j = 0; j < agents; j++) {
                     if (solutions[j][i + 1] == 0) continue;
                     nodesVisitors1[solutions[j][i + 1]].Add(j);
                 }
 
                 // Look for conflicts. If edge x->y, then not y->x.
-                for (int j = 0; j < instance.agents.Length; j++) {
+                for (int j = 0; j < agents; j++) {
                     int from = solutions[j][i];
                     int to = solutions[j][i + 1];
                     if (from == to) continue;
                     if (nodesVisitors0[to].Count == 1 && nodesVisitors1[from].Count > 0) {
-                        var visitor0 = nodesVisitors0[to][0];                        
+                        var visitor0 = nodesVisitors0[to][0];
                         for (int k = 0; k < nodesVisitors1[from].Count; k++) {
                             if (visitor0 == nodesVisitors1[from][k]) {
                                 conflict = new Conflict(1, i, j,
@@ -128,14 +127,14 @@ namespace src_cs {
             return foundConflict;
 
             void ClearTimeStep(int time) {
-                for (int i = 0; i < instance.agents.Length; i++) {
+                for (int i = 0; i < agents; i++) {
                     nodesVisitors0[solutions[i][time]].Clear();
                     nodesVisitors1[solutions[i][time + 1]].Clear();
                 }
             }
 
             void NextTimeStep(int time) {
-                for (int i = 0; i < instance.agents.Length; i++) {
+                for (int i = 0; i < agents; i++) {
                     nodesVisitors0[solutions[i][time]].Clear();
                 }
                 var tmpVisitors = nodesVisitors0;
@@ -147,49 +146,52 @@ namespace src_cs {
 
     class CBSNode : FastPriorityQueueNode {
         CBSNode pred;
-        Agent[] agents;
+        OrderInstance[][] orders;
+        int agentsCount;
         public int cost;
         int agentConstrained;
         List<Constraint>[] constraints;
         // List<Conflict> conflicts;
         public Tour[][] solution;
 
-        public CBSNode(Agent[] agents) {
+        public CBSNode(OrderInstance[][] orders) {
             pred = null;
             // conflicts = new List<Conflict>();
-            this.agents = agents;
+            this.orders = orders;
+            this.agentsCount = orders.Length;
 
             // Init empty constraints lists
-            constraints = new List<Constraint>[agents.Length];
+            constraints = new List<Constraint>[agentsCount];
             for (int i = 0; i < constraints.Length; i++) {
                 constraints[i] = new List<Constraint>();
             }
 
             // Init tours array
-            solution = new Tour[agents.Length][];
-            for (int i = 0; i < agents.Length; i++) {
-                solution[i] = new Tour[agents[i].orders.Length];
+            solution = new Tour[agentsCount][];
+            for (int i = 0; i < agentsCount; i++) {
+                solution[i] = new Tour[orders[i].Length];
             }
         }
 
         public CBSNode(CBSNode pred, Constraint[] newConstraint) {
             this.pred = pred;
-            this.agents = pred.agents;
-            this.solution = new Tour[agents.Length][];
-            for (int i = 0; i < agents.Length; i++) {
-                solution[i] = new Tour[agents[i].orders.Length];
+            this.orders = pred.orders;
+            this.agentsCount = pred.orders.Length;
+            this.solution = new Tour[agentsCount][];
+            for (int i = 0; i < agentsCount; i++) {
+                solution[i] = new Tour[orders[i].Length];
             }
 
-            for (int i = 0; i < agents.Length; i++) {
-                for (int j = 0; j < agents[i].orders.Length; j++) {
+            for (int i = 0; i < agentsCount; i++) {
+                for (int j = 0; j < orders[i].Length; j++) {
                     this.solution[i][j] = pred.solution[i][j];
                 }
             }
 
             // Copy old constraints and add new ones.
-            this.constraints = new List<Constraint>[agents.Length];
+            this.constraints = new List<Constraint>[orders.Length];
             this.agentConstrained = newConstraint[0].agent;
-            for (int i = 0; i < agents.Length; i++) {
+            for (int i = 0; i < orders.Length; i++) {
                 if (i != agentConstrained) {
                     this.constraints[i] = pred.constraints[i];
                 }
@@ -232,7 +234,7 @@ namespace src_cs {
                 if (i > 0)
                     offsetTime += constrainedSol[i - 1].cost;
                 constrainedSol[i].startTime = offsetTime;
-                constrainedSol[i] = solver.SolveGTSP(graph, constraints[agentConstrained], agents[agentConstrained].orders[i], offsetTime);
+                constrainedSol[i] = solver.SolveGTSP(graph, constraints[agentConstrained], orders[agentConstrained][i], offsetTime);
             }
 
             // Calculate solution cost as a sum of costs of tours
@@ -256,7 +258,7 @@ namespace src_cs {
                 for (int j = 0; j < solution[i].Length; j++) {
                     if (j > 0)
                         offsetTime += solution[i][j - 1].cost;
-                    solution[i][j] = solver.SolveGTSP(graph, constraints[i], agents[i].orders[j], offsetTime);
+                    solution[i][j] = solver.SolveGTSP(graph, constraints[i], orders[i][j], offsetTime);
                     this.cost += solution[i][j].cost;
                 }
                 offsetTime = 0;
