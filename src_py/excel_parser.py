@@ -50,11 +50,11 @@ def parse_document(data_path):
             *(sheet.cell(row, i).value for i in range(10))
         )
 
-    # Parse Order sheet
+    # Parse Order sheet - 12 columns with the PICKER column
     sheet = document.sheet_by_name("Order")
     orders = []
     for row in range(1, sheet.nrows):
-        orders.append(Order(*(sheet.cell(row, i).value for i in range(11))))
+        orders.append(PickerOrder(*(sheet.cell(row, i).value for i in range(12))))
 
     return locations, items, balance, orders
 
@@ -62,10 +62,10 @@ def parse_document(data_path):
 def serialize_warehouse(parsed_warehouse, file_path):
     locations = parsed_warehouse[0]
     items = parsed_warehouse[1]
-    balance =  parsed_warehouse[2]
+    balance = parsed_warehouse[2]
     orders = parsed_warehouse[3]
 
-    file = file = io.open(file_path, "w+")
+    file = io.open(file_path, "w+")
 
     # Compute the warehouse dimension
     x_max = 0
@@ -111,9 +111,9 @@ def serialize_warehouse(parsed_warehouse, file_path):
 
     file.write("\n")
     file.write("Orders\n")
-    file.write("order_id,direction,item_id,requested_qty\n")
+    file.write("order_id,order_line,direction,item_id,requested_qty,picker\n")
     for order in orders:
-        file.write(f"{int(order.id)},{order.direction},{int(order.item_id)},{int(order.requested_qty)}\n")
+        file.write(f"{int(order.id)},{int(order.line_num)},{order.direction},{order.item_id},{int(order.requested_qty)},{order.picker}\n")
     file.close()
     print()
 
