@@ -3,29 +3,40 @@ using System;
 using System.Collections.Generic;
 
 namespace src_cs {
-    class CBS {
+    class CBS : Solver {
+        private List<int>[] nodesVisitors0;
+        private List<int>[] nodesVisitors1;
+        private readonly int[] zero;
+        private readonly byte[] zeroNodes;
+        private readonly WarehouseInstance instance;
+        private readonly GTSPSolver solver;
+        private readonly int maxTime;
+        private readonly int agents;
+        int[][] solutions;
 
-        public static Tour[][] FindTours(WarehouseInstance instance) {
-            int maxTime = 16000;
-            int agents = instance.AgentCount;
-            List<int>[] nodesVisitors0 = new List<int>[instance.graph.vertices.Count];
-            List<int>[] nodesVisitors1 = new List<int>[instance.graph.vertices.Count];
+        public CBS(WarehouseInstance instance, int maxTime) {
+            this.maxTime = maxTime;
+            this.instance = instance;
+            this.agents = instance.AgentCount;
+            this.zeroNodes = new byte[instance.graph.vertices.Count];
+            this.zero = new int[maxTime];
+            this.solutions = new int[agents][];
+            this.nodesVisitors0 = new List<int>[instance.graph.vertices.Count];
+            this.nodesVisitors1 = new List<int>[instance.graph.vertices.Count];
             for (int i = 0; i < nodesVisitors0.Length; i++) {
                 nodesVisitors0[i] = new List<int>();
                 nodesVisitors1[i] = new List<int>();
             }
-
-            GTSPSolver.FindMaxValues(instance.orders, maxTime, out int maxClasses,
-                out int maxItems, out int maxSolverTime);
-            GTSPSolver solver = new GTSPSolver(maxClasses, maxItems, maxSolverTime);
-            int[][] solutions = new int[agents][];
             for (int i = 0; i < agents; i++) {
                 solutions[i] = new int[maxTime];
             }
 
-            // Init - old constructor
-            var zeroNodes = new byte[instance.graph.vertices.Count];
-            var zero = new int[maxTime];
+            GTSPSolver.FindMaxValues(instance.orders, maxTime, out int maxClasses,
+                out int maxItems, out int maxSolverTime);
+            this.solver = new GTSPSolver(maxClasses, maxItems, maxSolverTime);
+        }
+
+        public override Tour[][] FindTours() {
             var queue = new FastPriorityQueue<CBSNode>(agents * 200);
             var root = new CBSNode(instance.orders);
             root.CalculateInitRoutes(instance.graph, solver);
@@ -33,8 +44,7 @@ namespace src_cs {
 
             while (queue.Count != 0) {
                 var currNode = queue.Dequeue();
-                var foundConflict = FindConflicts(currNode.solution, out var conflict, nodesVisitors0, nodesVisitors1,
-                    zero, solutions, agents, maxTime);
+                var foundConflict = FindConflicts(currNode.solution, out var conflict);
                 if (!foundConflict) {
                     Console.WriteLine("Found solution.");
                     return currNode.solution;
@@ -51,14 +61,7 @@ namespace src_cs {
             return null;
         }
 
-
-
-        public CBS(WarehouseInstanceOld instance, int maxTime) {
-
-        }
-
-        public static bool FindConflicts(Tour[][] tours, out Conflict conflict, List<int>[] nodesVisitors0,
-            List<int>[] nodesVisitors1, int[] zero, int[][] solutions, int agents, int maxTime) {
+        public bool FindConflicts(Tour[][] tours, out Conflict conflict) {
             bool foundConflict = false;
             conflict = new Conflict();
             for (int i = 0; i < tours.Length; i++) {
@@ -147,7 +150,6 @@ namespace src_cs {
     class CBSNode : FastPriorityQueueNode {
         CBSNode pred;
         OrderInstance[][] orders;
-        int agentsCount;
         public int cost;
         int agentConstrained;
         List<Constraint>[] constraints;
@@ -158,17 +160,16 @@ namespace src_cs {
             pred = null;
             // conflicts = new List<Conflict>();
             this.orders = orders;
-            this.agentsCount = orders.Length;
 
             // Init empty constraints lists
-            constraints = new List<Constraint>[agentsCount];
+            constraints = new List<Constraint>[orders.Length];
             for (int i = 0; i < constraints.Length; i++) {
                 constraints[i] = new List<Constraint>();
             }
 
             // Init tours array
-            solution = new Tour[agentsCount][];
-            for (int i = 0; i < agentsCount; i++) {
+            solution = new Tour[orders.Length][];
+            for (int i = 0; i < orders.Length; i++) {
                 solution[i] = new Tour[orders[i].Length];
             }
         }
@@ -176,13 +177,12 @@ namespace src_cs {
         public CBSNode(CBSNode pred, Constraint[] newConstraint) {
             this.pred = pred;
             this.orders = pred.orders;
-            this.agentsCount = pred.orders.Length;
-            this.solution = new Tour[agentsCount][];
-            for (int i = 0; i < agentsCount; i++) {
+            this.solution = new Tour[orders.Length][];
+            for (int i = 0; i < orders.Length; i++) {
                 solution[i] = new Tour[orders[i].Length];
             }
 
-            for (int i = 0; i < agentsCount; i++) {
+            for (int i = 0; i < orders.Length; i++) {
                 for (int j = 0; j < orders[i].Length; j++) {
                     this.solution[i][j] = pred.solution[i][j];
                 }

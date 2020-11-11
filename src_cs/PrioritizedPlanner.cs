@@ -3,30 +3,38 @@ using System.Collections.Generic;
 using System.Diagnostics;
 
 namespace src_cs {
-    class PrioritizedPlanner {        
+    class PrioritizedPlanner {
+        WarehouseInstance instance;
+        GTSPSolver solver;
+        int maxTime;
+        int[][] solutions;
+        private List<int>[] nodesVisitors0;
+        private List<int>[] nodesVisitors1;
+        private readonly int[] zero;
+        private readonly int agents;
 
-        public static Tour[][] FindTours(WarehouseInstance instance) {
-            int agents = instance.AgentCount;            
-            int maxTime = 1024;
-            GTSPSolver.FindMaxValues(instance.orders, maxTime, out int maxClasses,
-                out int maxItems, out int maxSolverTime);
-            GTSPSolver solver = new GTSPSolver(maxClasses, maxItems, maxSolverTime);
-
-            int[][] solutions =  new int[agents][];
+        public PrioritizedPlanner(WarehouseInstance instance, int maxTime) {
+            this.maxTime = maxTime;
+            this.instance = instance;
+            this.agents = instance.AgentCount;
+            this.solutions = new int[agents][];
             for (int i = 0; i < agents; i++) {
                 solutions[i] = new int[maxTime];
             }
+            GTSPSolver.FindMaxValues(instance.orders, maxTime, out int maxClasses,
+                out int maxItems, out int maxSolverTime);
+            this.solver = new GTSPSolver(maxClasses, maxItems, maxSolverTime);
 
-            List<int>[] nodesVisitors0 = new List<int>[instance.graph.vertices.Count];
-            List<int>[] nodesVisitors1 = new List<int>[instance.graph.vertices.Count];
-            int[] zero = new int[maxTime];            
-            
-            
+            this.nodesVisitors0 = new List<int>[instance.graph.vertices.Count];
+            this.nodesVisitors1 = new List<int>[instance.graph.vertices.Count];
             for (int i = 0; i < nodesVisitors0.Length; i++) {
                 nodesVisitors0[i] = new List<int>();
                 nodesVisitors1[i] = new List<int>();
             }
-            
+            this.zero = new int[maxTime];
+        }
+
+        public Tour[][] FindTours() {
             Tour[][] solution;
             List<Constraint> constraints = new List<Constraint>();
             int totalCost = 0;
@@ -54,11 +62,12 @@ namespace src_cs {
 
             }
             offsetTime = 0;
-            
+            Stopwatch sw = new Stopwatch();
             // Calculate non-conflicting routes sequentially
             for (int i = 0; i < solution.Length; i++) {
                 constraints.Clear();
-                
+                sw.Restart();
+                sw.Start();
                 while (true) {
                     for (int j = 0; j < solution[i].Length; j++) {
                         if (j > 0)
@@ -67,8 +76,7 @@ namespace src_cs {
 
                     }
 
-                    if (FindFirstConflict(solution, out Conflict c, nodesVisitors0, nodesVisitors1, solutions,
-                        agents, maxTime, zero)) {
+                    if (FindFirstConflict(solution, out Conflict c)) {
                         var conf = c.MakeConstraints();
                         if (conf.Item1[0].agent == i) {
                             for (int k = 0; k < conf.Item1.Length; k++) {
@@ -86,14 +94,16 @@ namespace src_cs {
                         break;
                     }
                 }
-                
-                
+                sw.Stop();
+                Console.WriteLine("Agent {0} route has been found in {1}", i, sw.Elapsed);
+                Console.WriteLine("   Items {0}\n    classes {1}", instance.orders[i][0].vertices.Length, instance.orders[i][0].classes[^1]);
+                Console.WriteLine("   Constraint: {0}", constraints.Count);
             }
+            Console.WriteLine(totalCost);
+            Console.WriteLine(totalCostOpt);
             return solution;
         }
-        
-        public static bool FindFirstConflict(Tour[][] tours, out Conflict conflict, List<int>[] nodesVisitors0,
-            List<int>[] nodesVisitors1, int[][] solutions, int agents, int maxTime, int[] zero) {
+        public bool FindFirstConflict(Tour[][] tours, out Conflict conflict) {
             bool foundConflict = false;
             conflict = new Conflict();
             for (int i = 0; i < tours.Length; i++) {
