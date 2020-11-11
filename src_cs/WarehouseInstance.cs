@@ -15,15 +15,15 @@ namespace src_cs {
             // graph.Initialize(agents);
         }
 
-        public WarehouseInstance(Location[,] grid, List<StorageRack> storage, Order[][] orders) {            
+        public WarehouseInstance(Location[,] grid, Order[][] orders) {            
             // Make graph from grid and storage
             Vertex[,] tmpGrid = new Vertex[grid.GetLength(0), grid.GetLength(1)];
 
             int ctr = 0;
             for (int i = 0; i < grid.GetLength(0); i++) {
                 for (int j = 0; j < grid.GetLength(1); j++) {
-                    List<int> storageLeft = null;
-                    List<int> storageRight = null;
+                    int[] storageLeft = null;
+                    int[] storageRight = null;
                     if (grid[i,j] is StorageRack) {
                         continue;
                     }
@@ -109,11 +109,11 @@ namespace src_cs {
 
 
             // Make Orders from Graph and the array
-            int[,] ConvertStorage(List<int> storage) {
+            int[,] ConvertStorage(int[] storage) {
                 if (storage == null)
                     return null;
-                var newStorage = new int[storage.Count, 2];
-                for (int i = 0; i < storage.Count; i++) {
+                var newStorage = new int[storage.Length, 2];
+                for (int i = 0; i < storage.Length; i++) {
                     newStorage[i, 0] = storage[i];
                 }
                 return newStorage;

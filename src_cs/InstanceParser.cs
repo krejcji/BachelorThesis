@@ -2,8 +2,6 @@
 using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
-using System.Runtime.CompilerServices;
-using System.Security.Cryptography.X509Certificates;
 
 namespace src_cs {
     public class WarehouseInstanceOld {
@@ -15,7 +13,7 @@ namespace src_cs {
             this.agents = agents;
             //graph.Initialize(agents);
         }
-    }    
+    }
 
     class InstanceParser {
         public static WarehouseInstanceOld Parse(string instancePath) {
@@ -96,7 +94,7 @@ namespace src_cs {
                             var height = int.Parse(tuple[2]);
                             orderItems[k].Add((vertexId, loc, height));
                         }
-                    }                    
+                    }
                     ordersList.Add(new OrderInstance(orderId++, orderItems, source, target, graph));
                 }
                 agents.Add(new Agent(ordersList.ToArray(), i));
@@ -110,7 +108,7 @@ namespace src_cs {
             string[] tokens;
 
             line = file.ReadLine();
-            if (line.Substring(0,10) != "Dimension:")
+            if (line.Substring(0, 10) != "Dimension:")
                 throw new FormatException("File format not by the specification.");
             tokens = line.Split(':')[1].Split(',', StringSplitOptions.RemoveEmptyEntries);
             int x, y, z = 0;
@@ -119,37 +117,37 @@ namespace src_cs {
             z = int.Parse(tokens[2]) + 1;
 
             if ((line = file.ReadLine()) != "LOCATIONmaster")
-                throw new FormatException("File format not by the specification.");            
+                throw new FormatException("File format not by the specification.");
 
-            Tuple<string, string, string, string, string>[,,] grid = new Tuple<string, string, string, string, string>[x,y,z];
+            var grid = new Location[x, y];
+            var locationDict = new Dictionary<string, Tuple<int,int,int>>();
             file.ReadLine();
-            
+
             while ((line = file.ReadLine()) != "") {
                 tokens = line.Split(',');
                 var x_coord = int.Parse(tokens[0]) - 1;
                 var y_coord = int.Parse(tokens[1]) - 1;
                 var z_coord = int.Parse(tokens[2]);
+                locationDict.Add(tokens[3], new Tuple<int, int, int>(x_coord, y_coord, z_coord));
+                
+                if (z_coord != 0)
+                    continue;
 
-                List<string> values = new List<string>();
-                for (int i = 3; i < tokens.Length; i++) {
-                    values.Add(tokens[i]);                    
-                }
-                grid[x_coord, y_coord, z_coord] = new Tuple<string, string, string, string, string>(
-                                                         values[0], values[1], values[2],
-                                                         values[3], values[4]);
+                grid[x_coord, y_coord] = Parse_location(tokens, z);                
             }
 
-            if (line != "ITEMmaster")
+            if ((line = file.ReadLine()) != "ITEMmaster")
                 throw new FormatException("File format not by the specification.");
             file.ReadLine();
-            List<Tuple<string, string, string>> items = new List<Tuple<string, string, string>>();
+            int item_index = 0;
+            var items = new Dictionary<string, int>();
 
             while ((line = file.ReadLine()) != "") {
                 tokens = line.Split(',');
-                items.Add(new Tuple<string, string, string>(tokens[0], tokens[1], tokens[2]));
+                items.Add(tokens[1], item_index++);
             }
 
-            if (line != "Inventory balance")
+            if ((line = file.ReadLine()) != "Inventory balance")
                 throw new FormatException("File format not by the specification.");
             file.ReadLine();
             string date = null;
@@ -159,22 +157,91 @@ namespace src_cs {
                     date = line;
                     continue;
                 }
+                else {
+                    tokens = line.Split(',');
+                    var record = locationDict[tokens[0]];
+                    var itemId = items[tokens[1]];
+                    var loc = grid[record.Item1, record.Item2];
+                    var storage = loc as StorageRack;
+                    if (storage != null) {
+                        storage.items[record.Item3] = itemId;
+                    }
+                    else {
+                        throw new Exception("Items outside of storage rack.");
+                    }
+                }
             }
 
-            if (line != "Orders")
+            if ((line = file.ReadLine()) != "Orders")
                 throw new FormatException("File format not by the specification.");
             file.ReadLine();
-            Dictionary<int, List<Tuple<string, string, int>>> orders = new Dictionary<int, List<Tuple<string, string, int>>>();
+            var ordersDict = new Dictionary<string, Dictionary<int, List<Tuple<string,string,int>>>>();            
 
-            while ((line = file.ReadLine()) != "") {
-                tokens = line.Split(',');
+            while ((line = file.ReadLine()) != null) {
+                tokens = line.Split(',');                
                 int orderId = int.Parse(tokens[0]);
-                if (!orders.ContainsKey(orderId))
-                    orders.Add(orderId, new List<Tuple<string, string, int>>());
-                orders[orderId].Add(new Tuple<string, string, int>(tokens[1], tokens[2], int.Parse(tokens[3])));
+                var dir = tokens[2];
+                var itemId = tokens[3];
+                var qty = int.Parse(tokens[4]);
+                var picker = tokens[5];
+                var order = new Tuple<string, string, int>(itemId, dir, qty);
+
+                if (!ordersDict.ContainsKey(picker)) 
+                    ordersDict.Add(picker, new Dictionary<int, List<Tuple<string, string, int>>>());
+
+                if (!ordersDict[picker].ContainsKey(orderId))
+                    ordersDict[picker].Add(orderId, new List<Tuple<string, string, int>>());
+
+                ordersDict[picker][orderId].Add(order);
+            }
+            file.Close();
+
+
+            int pickers = ordersDict.Keys.Count;
+            var orders = new Order[pickers][];
+            int i = 0;
+            foreach (var picker in ordersDict.Keys) {
+                orders[i] = new Order[ordersDict[picker].Keys.Count];
+                int j = 0;
+                foreach (var orderId in ordersDict[picker].Keys) {
+                    var orderLines = ordersDict[picker][orderId];
+                    int[] itemsArr = new int[orderLines.Count];
+                    for (int k = 0; k < orderLines.Count; k++) {
+                        itemsArr[k] = items[orderLines[k].Item1];
+                    }
+                    Point from;
+                    Point to;
+                    if (orderLines[0].Item2 == "outbound") {
+                        // TODO: Random starting location in outbound area?
+                        from = new Point(3+i, 3);
+                        to = new Point(3+i, 3);
+                    }
+                    else {                        
+                        from = new Point(3 + i, 3);
+                        to = new Point(3 + i, 3);
+                    }
+                    orders[i][j] = new Order(from, to, itemsArr);
+                    j++;
+                }
+                i++;
             }
 
-            return null;
+
+            return new WarehouseInstance(grid, orders);
+
+
+            Location Parse_location(string[] tokens, int levels) {
+                switch (tokens[4]) {
+                    case "Floor":
+                        return new Floor();
+                    case "Staging area":
+                        return new StagingArea();
+                    case "Storage Rack":
+                        return new StorageRack(levels);
+                    default:
+                        return null;
+                }
+            }            
         }
     }
 }
