@@ -4,6 +4,11 @@
 
 
 
+**11.11.**
+
+* Dokončeno parsování
+* Předběžné testy
+
 **4.11.**
 
 * První funkční verze generování instancí v C# a návrh parametrizace
