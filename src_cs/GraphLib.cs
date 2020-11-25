@@ -211,11 +211,11 @@ namespace src_cs {
         /// <param name="constraints"></param>
         /// <param name="reverseSearch">Find backwards route if true.</param>
         /// <returns></returns>
-        public (int, int[]) ShortestRoute(int pickVertex, int target, int pickTime, int realTime, SortedList<int, List<int>> constraints,
+        public (int Length, int[] route) ShortestRoute(int pickVertex, int target, int pickTime, int realTime, SortedList<int, List<int>> constraints,
             bool reverseSearch, bool returnPath) {            
-            (int, int[]) route = (distancesCache[pickVertex][target] + pickTime, routesCache[pickVertex][target]);
-            int maxTime = reverseSearch ? realTime : realTime + route.Item1;
-            int minTime = reverseSearch ? realTime - route.Item1 : realTime;
+            (int totalTime, int[] vertices) route = (distancesCache[pickVertex][target] + pickTime, routesCache[pickVertex][target]);
+            int maxTime = reverseSearch ? realTime : realTime + route.totalTime;
+            int minTime = reverseSearch ? realTime - route.totalTime : realTime;
 
 
             if (constraints != null && minTime >= 0) {
@@ -227,40 +227,43 @@ namespace src_cs {
                             if (relativeTime <= pickTime && pickVertex == constraints[time][i]) {
                                 return (0, null);
                             }
-                            else if (relativeTime > pickTime && route.Item2[relativeTime - pickTime] == constraints[time][i]) {
+                            else if (relativeTime > pickTime && route.vertices[relativeTime - pickTime] == constraints[time][i]) {
                                 if (reverseSearch) {
                                     route = AStar(pickVertex, target, constraints, realTime, reverseSearch);
                                 }
                                 else {
                                     route = AStar(pickVertex, target, constraints, realTime + pickTime, reverseSearch);
                                 }
-                                route.Item1 += pickTime;
+                                route.totalTime += pickTime;
                                 if (returnPath)
-                                    return (route.Item1, RouteWithPickVertices());
+                                    return route;
                                 else
-                                    return (route.Item1, null);
+                                    return (route.totalTime, null);
                             }
                         }
                     }
                 }
             }
             if (!returnPath) {
-                return (route.Item1, null);
+                return (route.totalTime, null);
             }
             else {
-                return (route.Item1, RouteWithPickVertices());
+                return route;
             }
 
+            // TODO: Remove
+            /*
             int[] RouteWithPickVertices() {
-                var result = new int[route.Item2.Length + pickTime];
+                var result = new int[route.vertices.Length + pickTime];
                 for (int i = 0; i < pickTime; i++) {
                     result[i] = pickVertex;
                 }
-                for (int i = pickTime; i < route.Item2.Length + pickTime; i++) {
-                    result[i] = route.Item2[i - pickTime];
+                for (int i = pickTime; i < route.vertices.Length + pickTime; i++) {
+                    result[i] = route.vertices[i - pickTime];
                 }
                 return result;
             }
+            */
         }
 
         public (int, int[]) AStar(int x, int y, SortedList<int, List<int>> constraints, int beginTime, bool reverseSearch) {

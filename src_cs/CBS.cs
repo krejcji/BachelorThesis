@@ -6,29 +6,20 @@ namespace src_cs {
     class CBS : Solver {
         private List<int>[] nodesVisitors0;
         private List<int>[] nodesVisitors1;
-        private readonly int[] zero;
-        private readonly byte[] zeroNodes;
         private readonly WarehouseInstance instance;
         private readonly GTSPSolver solver;
         private readonly int maxTime;
         private readonly int agents;
-        int[][] solutions;
 
         public CBS(WarehouseInstance instance, int maxTime) {
             this.maxTime = maxTime;
             this.instance = instance;
             this.agents = instance.AgentCount;
-            this.zeroNodes = new byte[instance.graph.vertices.Count];
-            this.zero = new int[maxTime];
-            this.solutions = new int[agents][];
             this.nodesVisitors0 = new List<int>[instance.graph.vertices.Count];
             this.nodesVisitors1 = new List<int>[instance.graph.vertices.Count];
             for (int i = 0; i < nodesVisitors0.Length; i++) {
                 nodesVisitors0[i] = new List<int>();
                 nodesVisitors1[i] = new List<int>();
-            }
-            for (int i = 0; i < agents; i++) {
-                solutions[i] = new int[maxTime];
             }
 
             GTSPSolver.FindMaxValues(instance.orders, maxTime, out int maxClasses,
@@ -37,7 +28,7 @@ namespace src_cs {
         }
 
         public override Tour[][] FindTours() {
-            var queue = new FastPriorityQueue<CBSNode>(agents * 200);
+            var queue = new FastPriorityQueue<CBSNode>(agents * 15000);
             var root = new CBSNode(instance.orders);
             root.CalculateInitRoutes(instance.graph, solver);
             queue.Enqueue(root, root.cost);
@@ -62,87 +53,100 @@ namespace src_cs {
         }
 
         public bool FindConflicts(Tour[][] tours, out Conflict conflict) {
-            bool foundConflict = false;
             conflict = new Conflict();
-            for (int i = 0; i < tours.Length; i++) {
-                for (int j = 0; j < tours[i].Length; j++) {
-                    Array.Copy(tours[i][j].tourVertices, 0, solutions[i], tours[i][j].startTime, tours[i][j].tourVertices.Length);
+            var currVertices = new int[tours.Length];
+            var nextVertices = new int[tours.Length];
+            var enums = new IEnumerator<int>[tours.Length];
+            for (int i = 0; i < enums.Length; i++) {
+                enums[i] = Tour.GetArrayEnum(tours[i]);
+                if (enums[i].MoveNext()) {
+                    currVertices[i] = enums[i].Current;
+                }
+                if (enums[i].MoveNext()) {
+                    nextVertices[i] = enums[i].Current;
                 }
             }
 
             // Add agent indicies into visited vertices at 0 timestep
             for (int j = 0; j < agents; j++) {
-                if (solutions[j][0] == 0) continue;  // Depot/default value can be occupied by more agents
-                nodesVisitors0[solutions[j][0]].Add(j);
+                if (currVertices[j] == 0) continue;  // Depot/default value can be occupied by more agents
+                nodesVisitors0[currVertices[j]].Add(j);
             }
 
-            for (int i = 0; i < maxTime - 1; i++) {
+            for (int time = 0; time < maxTime - 1; time++) {
                 // Look for vertex conflicts.
-                for (int j = 0; j < agents; j++) {
-                    if (nodesVisitors0[solutions[j][i]].Count > 1) {
-                        if (solutions[j][i] == 0) continue;
+                for (int i = 0; i < agents; i++) {
+                    if (nodesVisitors0[currVertices[i]].Count > 1) {
+                        if (currVertices[i] == 0) continue;
 
                         // Report conflict and clean up the lists.
-                        var visitList = nodesVisitors0[solutions[j][i]];
-                        conflict = new Conflict(0, i, visitList[0], visitList[1], solutions[j][i], 0);
-                        foundConflict = true;
-                        ClearTimeStep(i);
-                        goto Cleanup;
+                        var visitList = nodesVisitors0[currVertices[i]];
+                        conflict = new Conflict(0, time, visitList[0], visitList[1], currVertices[i], 0);
+                        ClearTimeStep();
+                        return true;
                     }
                 }
 
                 // Look for edge conflicts.
                 // Fill in t+1 used vertices.
-                if (i == maxTime - 1) continue;
+                if (time == maxTime - 1) continue;
                 for (int j = 0; j < agents; j++) {
-                    if (solutions[j][i + 1] == 0) continue;
-                    nodesVisitors1[solutions[j][i + 1]].Add(j);
+                    if (nextVertices[j] == 0) continue;
+                    nodesVisitors1[nextVertices[j]].Add(j);
                 }
 
                 // Look for conflicts. If edge x->y, then not y->x.
                 for (int j = 0; j < agents; j++) {
-                    int from = solutions[j][i];
-                    int to = solutions[j][i + 1];
+                    int from = currVertices[j];
+                    int to = nextVertices[j];
                     if (from == to) continue;
                     if (nodesVisitors0[to].Count == 1 && nodesVisitors1[from].Count > 0) {
                         var visitor0 = nodesVisitors0[to][0];
                         for (int k = 0; k < nodesVisitors1[from].Count; k++) {
                             if (visitor0 == nodesVisitors1[from][k]) {
-                                conflict = new Conflict(1, i, j,
+                                conflict = new Conflict(1, time, j,
                                     visitor0, from, to);
-                                foundConflict = true;
-                                ClearTimeStep(i);
-                                goto Cleanup;
+                                ClearTimeStep();
+                                return true;
                             }
                         }
                     }
                 }
-                NextTimeStep(i);
+                NextTimeStep();
             }
 
-        Cleanup:
-            // Clean up the temp arrays.
-            for (int i = 0; i < tours.Length; i++) {
-                for (int j = 0; j < tours[i].Length; j++) {
-                    Array.Copy(zero, 0, solutions[i], tours[i][j].startTime, tours[i][j].tourVertices.Length);
-                }
-            }
-            return foundConflict;
+            ClearTimeStep();
+            return false;
 
-            void ClearTimeStep(int time) {
+            void ClearTimeStep() {
                 for (int i = 0; i < agents; i++) {
-                    nodesVisitors0[solutions[i][time]].Clear();
-                    nodesVisitors1[solutions[i][time + 1]].Clear();
+                    nodesVisitors0[currVertices[i]].Clear();
+                    nodesVisitors1[nextVertices[i]].Clear();
                 }
             }
 
-            void NextTimeStep(int time) {
+            void NextTimeStep() {
                 for (int i = 0; i < agents; i++) {
-                    nodesVisitors0[solutions[i][time]].Clear();
+                    nodesVisitors0[currVertices[i]].Clear();
                 }
-                var tmpVisitors = nodesVisitors0;
-                nodesVisitors0 = nodesVisitors1;
-                nodesVisitors1 = tmpVisitors;
+                {
+                    var tmp = nodesVisitors0;
+                    nodesVisitors0 = nodesVisitors1;
+                    nodesVisitors1 = tmp;
+                }
+                {
+                    var tmp = currVertices;
+                    currVertices = nextVertices;
+                    nextVertices = tmp;
+                }
+                for (int i = 0; i < agents; i++) {
+                    if (enums[i].MoveNext()) {
+                        nextVertices[i] = enums[i].Current;
+                    }
+                    else {
+                        nextVertices[i] = currVertices[i];
+                    }
+                }
             }
         }
     }
@@ -175,7 +179,7 @@ namespace src_cs {
         }
 
         public CBSNode(CBSNode pred, Constraint[] newConstraint) {
-            this.pred = pred;
+            //this.pred = pred;
             this.orders = pred.orders;
             this.solution = new Tour[orders.Length][];
             for (int i = 0; i < orders.Length; i++) {
@@ -232,7 +236,7 @@ namespace src_cs {
             int offsetTime = 0;
             for (int i = 0; i < constrainedSol.Length; i++) {
                 if (i > 0)
-                    offsetTime += constrainedSol[i - 1].cost;
+                    offsetTime += constrainedSol[i - 1].Length;
                 constrainedSol[i].startTime = offsetTime;
                 constrainedSol[i] = solver.SolveGTSP(graph, constraints[agentConstrained], orders[agentConstrained][i], offsetTime);
             }
@@ -240,7 +244,7 @@ namespace src_cs {
             // Calculate solution cost as a sum of costs of tours
             for (int i = 0; i < solution.Length; i++) {
                 for (int j = 0; j < solution[i].Length; j++) {
-                    this.cost += solution[i][j].cost;
+                    this.cost += solution[i][j].Length;
                 }
             }
 
@@ -257,9 +261,9 @@ namespace src_cs {
             for (int i = 0; i < solution.Length; i++) {
                 for (int j = 0; j < solution[i].Length; j++) {
                     if (j > 0)
-                        offsetTime += solution[i][j - 1].cost;
+                        offsetTime += solution[i][j - 1].Length;
                     solution[i][j] = solver.SolveGTSP(graph, constraints[i], orders[i][j], offsetTime);
-                    this.cost += solution[i][j].cost;
+                    this.cost += solution[i][j].Length;
                 }
                 offsetTime = 0;
             }

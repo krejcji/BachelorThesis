@@ -49,7 +49,7 @@ namespace src_cs {
                 int itemsIdx = 0;
                 foreach (var rack in storage) {
                     for (int j = 0; j < storageDesc.storageLevels; j++) {
-                        rack.items.Add(itemsList[itemsIdx++]);
+                        rack.items[j] = itemsList[itemsIdx++];
                     }
                 }
             }
@@ -60,7 +60,7 @@ namespace src_cs {
             // Generate orders
             var orders = GenerateRandomOrders(orderDesc.agents, 8, 3, storageDesc.uniqueItems, 3, rand);
 
-            return new WarehouseInstance(grid, storage, orders);
+            return new WarehouseInstance(grid, orders);
 
 
             bool isFloor(int x, int y) {
@@ -148,11 +148,11 @@ namespace src_cs {
 
     public class StorageRack : Location {
         int levels;
-        public List<int> items;
+        public int[] items;
 
         public StorageRack(int levels) {
             this.levels = levels;
-            items = new List<int>(levels);
+            items = new int[levels];
         }
     }
 

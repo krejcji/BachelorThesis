@@ -4,8 +4,13 @@ using System.Collections.Generic;
 namespace src_cs {
     class WarehousePathFinder {
         static void Main(string[] args) {
-            TestingUtils.RunTests(CBS.FindTours, 10);
-            TestingUtils.RunTests(PrioritizedPlanner.FindTours, 10);
+
+            var wi = InstanceParser.Parse2("../../../../../src_py/test_warehouse.txt");
+            var cbs = new CBS(wi, 80000);
+            cbs.FindTours();
+
+            //TestingUtils.RunTests(CBS, 10);
+            //TestingUtils.RunTests(PrioritizedPlanner, 10);
 
             Console.ReadKey();
         }
