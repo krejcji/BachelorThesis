@@ -4,6 +4,11 @@
 
 
 
+**25.11.**
+
+* Snížení paměťové náročnosti prohledávání
+  * Efektivní implementace třídy Tour
+
 **11.11.**
 
 * Dokončeno parsování
