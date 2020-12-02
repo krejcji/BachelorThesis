@@ -1,7 +1,7 @@
 ﻿using Priority_Queue;
 using System;
-using System.Drawing;
 using System.Collections.Generic;
+using System.Drawing;
 
 namespace src_cs {
     public class Vertex {
@@ -50,7 +50,6 @@ namespace src_cs {
     public sealed class Graph {
         private int[][] distancesCache;
         private int[][][] routesCache;
-        private int[][][] pickTimesCache;
         private AStarNode[] queueCacheA;
         private AStarNode[] emptyArr;
         private AStarNodeFactory nodeFactory;
@@ -80,9 +79,9 @@ namespace src_cs {
                             AddEdge(e);
                         }
                     }
-                    if (j!=0) {
-                        if(grid[i,j-1] != null) {
-                            Edge e = new Edge(grid[i, j-1].index, vertex.index, 1);
+                    if (j != 0) {
+                        if (grid[i, j - 1] != null) {
+                            Edge e = new Edge(grid[i, j - 1].index, vertex.index, 1);
                             AddEdge(e);
                         }
                     }
@@ -105,7 +104,7 @@ namespace src_cs {
             aStarQueue = new FastPriorityQueue<AStarNode>(2 * vertices.Count);
             nodeFactory = new AStarNodeFactory(2 * vertices.Count);
             queueCacheA = new AStarNode[vertices.Count];
-            emptyArr = new AStarNode[vertices.Count];            
+            emptyArr = new AStarNode[vertices.Count];
 
             // Init cache arrays
             distancesCache = new int[vertices.Count][];
@@ -136,7 +135,7 @@ namespace src_cs {
                         }
                     }
                 }
-                
+
                 foreach (var vertex in verticesUsed) {
                     BFS(q, vertex);
                 }
@@ -184,8 +183,8 @@ namespace src_cs {
             return PickFormula(height, 120, 4, 120);
         }
 
-        public Vertex FindLocation(Point coord) {            
-            foreach (var vertex in vertices) {                
+        public Vertex FindLocation(Point coord) {
+            foreach (var vertex in vertices) {
                 if (vertex.coordinates == coord)
                     return vertex;
             }
@@ -212,7 +211,7 @@ namespace src_cs {
         /// <param name="reverseSearch">Find backwards route if true.</param>
         /// <returns></returns>
         public (int Length, int[] route) ShortestRoute(int pickVertex, int target, int pickTime, int realTime, SortedList<int, List<int>> constraints,
-            bool reverseSearch, bool returnPath) {            
+            bool reverseSearch, bool returnPath) {
             (int totalTime, int[] vertices) route = (distancesCache[pickVertex][target] + pickTime, routesCache[pickVertex][target]);
             int maxTime = reverseSearch ? realTime : realTime + route.totalTime;
             int minTime = reverseSearch ? realTime - route.totalTime : realTime;
@@ -250,20 +249,6 @@ namespace src_cs {
             else {
                 return route;
             }
-
-            // TODO: Remove
-            /*
-            int[] RouteWithPickVertices() {
-                var result = new int[route.vertices.Length + pickTime];
-                for (int i = 0; i < pickTime; i++) {
-                    result[i] = pickVertex;
-                }
-                for (int i = pickTime; i < route.vertices.Length + pickTime; i++) {
-                    result[i] = route.vertices[i - pickTime];
-                }
-                return result;
-            }
-            */
         }
 
         public (int, int[]) AStar(int x, int y, SortedList<int, List<int>> constraints, int beginTime, bool reverseSearch) {

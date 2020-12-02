@@ -4,6 +4,7 @@ using System.Drawing;
 using System.IO;
 
 namespace src_cs {
+
     public class WarehouseInstanceOld {
         public Graph graph;
         public Agent[] agents;
@@ -14,7 +15,6 @@ namespace src_cs {
             //graph.Initialize(agents);
         }
     }
-
     class InstanceParser {
         public static WarehouseInstanceOld Parse(string instancePath) {
             StreamReader file = new StreamReader(instancePath);
@@ -120,7 +120,7 @@ namespace src_cs {
                 throw new FormatException("File format not by the specification.");
 
             var grid = new Location[x, y];
-            var locationDict = new Dictionary<string, Tuple<int,int,int>>();
+            var locationDict = new Dictionary<string, Tuple<int, int, int>>();
             file.ReadLine();
 
             while ((line = file.ReadLine()) != "") {
@@ -129,11 +129,11 @@ namespace src_cs {
                 var y_coord = int.Parse(tokens[1]) - 1;
                 var z_coord = int.Parse(tokens[2]);
                 locationDict.Add(tokens[3], new Tuple<int, int, int>(x_coord, y_coord, z_coord));
-                
+
                 if (z_coord != 0)
                     continue;
 
-                grid[x_coord, y_coord] = Parse_location(tokens, z);                
+                grid[x_coord, y_coord] = Parse_location(tokens, z);
             }
 
             if ((line = file.ReadLine()) != "ITEMmaster")
@@ -175,10 +175,10 @@ namespace src_cs {
             if ((line = file.ReadLine()) != "Orders")
                 throw new FormatException("File format not by the specification.");
             file.ReadLine();
-            var ordersDict = new Dictionary<string, Dictionary<int, List<Tuple<string,string,int>>>>();            
+            var ordersDict = new Dictionary<string, Dictionary<int, List<Tuple<string, string, int>>>>();
 
             while ((line = file.ReadLine()) != null) {
-                tokens = line.Split(',');                
+                tokens = line.Split(',');
                 int orderId = int.Parse(tokens[0]);
                 var dir = tokens[2];
                 var itemId = tokens[3];
@@ -186,7 +186,7 @@ namespace src_cs {
                 var picker = tokens[5];
                 var order = new Tuple<string, string, int>(itemId, dir, qty);
 
-                if (!ordersDict.ContainsKey(picker)) 
+                if (!ordersDict.ContainsKey(picker))
                     ordersDict.Add(picker, new Dictionary<int, List<Tuple<string, string, int>>>());
 
                 if (!ordersDict[picker].ContainsKey(orderId))
@@ -213,10 +213,10 @@ namespace src_cs {
                     Point to;
                     if (orderLines[0].Item2 == "outbound") {
                         // TODO: Random starting location in outbound area?
-                        from = new Point(3+i, 3);
-                        to = new Point(3+i, 3);
+                        from = new Point(3 + i, 3);
+                        to = new Point(3 + i, 3);
                     }
-                    else {                        
+                    else {
                         from = new Point(3 + i, 3);
                         to = new Point(3 + i, 3);
                     }
@@ -225,10 +225,7 @@ namespace src_cs {
                 }
                 i++;
             }
-
-
             return new WarehouseInstance(grid, orders);
-
 
             Location Parse_location(string[] tokens, int levels) {
                 switch (tokens[4]) {
@@ -241,7 +238,7 @@ namespace src_cs {
                     default:
                         return null;
                 }
-            }            
+            }
         }
     }
 }

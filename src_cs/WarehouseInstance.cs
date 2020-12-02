@@ -128,13 +128,28 @@ namespace src_cs {
         public void ModifyOrders() {
             // Generate new set of orders
 
-        }
+        }        
     }
 
     public struct InstanceDescription {
         public WarehouseLayout layout;
         public StorageDescription storageDescription;
         public OrdersDescription ordersDescription;
+
+        public static InstanceDescription GetSmall() {
+            var id = new InstanceDescription();
+            id.layout = new WarehouseLayout(10, 3, 10, false);
+            id.storageDescription = new StorageDescription(5, true, 500);
+            id.ordersDescription = new OrdersDescription(2,5,2,10,2);
+            return id;
+        }
+        public static InstanceDescription GetMedium() {
+            var id = new InstanceDescription();
+            id.layout = new WarehouseLayout(30, 5, 10, false);
+            id.storageDescription = new StorageDescription(5, true, 2000);
+            id.ordersDescription = new OrdersDescription(4, 5, 2, 10, 2);
+            return id;
+        }
     }
 
     public struct WarehouseLayout {

@@ -5,11 +5,18 @@ namespace src_cs {
     class WarehousePathFinder {
         static void Main(string[] args) {
 
+            var tests = new List<TestScenario>();
+            
+            tests.Add(new TestScenario(SolverType.CBS, InstanceDescription.GetSmall()));
+            tests.Add(new TestScenario(SolverType.PrioritizedPlanner, InstanceDescription.GetSmall()));
+
+            TestingUtils.RunTests(tests, 5);
+            /*
             var wi = InstanceParser.Parse2("../../../../../src_py/test_warehouse.txt");
             var cbs = new CBS(wi, 80000);
             cbs.FindTours();
-
-            //TestingUtils.RunTests(CBS, 10);
+            */
+            
             //TestingUtils.RunTests(PrioritizedPlanner, 10);
 
             Console.ReadKey();

@@ -23,6 +23,7 @@ namespace src_cs {
             var orderDesc = instanceDescriptoon.ordersDescription;            
 
             // Generate the grid
+            // TODO: Special storage
             int width = 3 * layout.aisles - 2;
             int height = 2 * layout.crossAisles + (layout.crossAisles - 1) * layout.aisleRows + 6;
             Location[,] grid = new Location[width, height];
@@ -54,11 +55,13 @@ namespace src_cs {
                 }
             }
             else {
-                // TODO:
+                // TODO: Zone item placement?
+                throw new NotImplementedException("Other than random placement of items not implemented.");
             }
 
             // Generate orders
-            var orders = GenerateRandomOrders(orderDesc.agents, 8, 3, storageDesc.uniqueItems, 3, rand);
+            var orders = GenerateRandomOrders(orderDesc.agents, orderDesc.itemsPerOrder, orderDesc.ordersPerAgent,
+                                              storageDesc.uniqueItems,orderDesc.ordersVariance, orderDesc.itemsVariance, rand);
 
             return new WarehouseInstance(grid, orders);
 
@@ -89,16 +92,16 @@ namespace src_cs {
             return itemsList;
         }
 
-        static Order[][] GenerateRandomOrders(int agents, int averageItems, int averageOrders, int uniqueItems, int variability,
+        static Order[][] GenerateRandomOrders(int agents, int averageItems, int averageOrders, int uniqueItems,int orderVar, int itemVar,
                                        Random rand) {
             Order[][] orders = new Order[agents][];
             for (int i = 0; i < agents; i++) {
-                orders[i] = new Order[rand.Next(averageOrders - 1, averageOrders + 2)];
+                orders[i] = new Order[rand.Next(averageOrders - orderVar, averageOrders + orderVar+1)];
             }
 
             for (int i = 0; i < agents; i++) {
                 for (int j = 0; j < orders[i].Length; j++) {
-                    int orderLength = rand.Next(averageItems - variability, averageItems + variability + 1);
+                    int orderLength = rand.Next(averageItems - itemVar, averageItems + itemVar + 1);
                     int[] items = new int[orderLength];
                     orders[i][j] = new Order(new Point(2*i, 2), new Point(2*i, 2), items);
                     for (int k = 0; k < orderLength; k++) {

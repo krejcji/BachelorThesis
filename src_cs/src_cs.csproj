@@ -12,8 +12,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="OptimizedPriorityQueue" Version="4.2.0" />
-    <PackageReference Include="PriorityQueue" Version="0.1.0" />
+    <PackageReference Include="OptimizedPriorityQueue" Version="5.0.0" />
   </ItemGroup>
 
 </Project>

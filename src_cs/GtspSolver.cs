@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Numerics;
 
@@ -176,7 +175,6 @@ namespace src_cs {
         }
     }
 
-
     class GTSPSolverFactory {
         GTSPSolver[] solvers;
         int tMax;
@@ -331,7 +329,7 @@ namespace src_cs {
             for (int i = 0; i < classesLeft.Length - 1; i++) {
                 var currNode = solution.First.Value;
                 var previous = Backtrack(currTime, currNode.from);
-                currTime -= previous.route.Length + previous.pickTime;
+                currTime -= previous.route.Length + previous.pickTime - 1;
                 solution.AddFirst(previous);
             }
 
@@ -362,7 +360,7 @@ namespace src_cs {
                         break;
                     }
                 }
-                if (allZero) {                                                  // TODO: pickTimes[0] was pick time of start location
+                if (allZero) {
                     var (t1, r1) = graph.ShortestRoute(startLoc, lastVertex, 0, visitTime + timeOffset, constraints, true, true);
                     if (visitTime - t1 == 0 && t1 != 0)
                         return (startLoc, lastVertex, 0, r1);
@@ -398,120 +396,25 @@ namespace src_cs {
                 throw new Exception();
             }
         }
-        public static void FindMaxValues(OrderInstance[][] orders, int maxTime, out int maxClasses, out int maxItems,
+        public static void FindMaxValues(OrderInstance[][] orders, out int maxClasses, out int maxItems, out int maxOrders,
                                          out int maxSolverTime) {
-            int maxOrders = 0;
+            maxOrders = 0;
             maxClasses = 0;
             maxItems = 0;
+            int maxPickTime = 0;
             foreach (var agent in orders) {
                 maxOrders = maxOrders < agent.Length ? agent.Length : maxOrders;
                 foreach (var order in agent) {
                     maxClasses = maxClasses < order.classes[^1] ? order.classes[^1] : maxClasses;
                     maxItems = maxItems < order.vertices.Length ? order.vertices.Length : maxItems;
+                    foreach (var item in order.pickTimes) {
+                        if (item < maxPickTime)
+                            maxPickTime = item;
+                    }
                 }
             }
             // maxTime must be greater than the timespan of all orders of agent summed
-            maxSolverTime = maxTime / maxOrders;
-        }
-    }
-
-    public sealed class Tour : IEnumerable<int> {
-        public int Length { get; private set; }
-        public int startTime;
-        public int[] pickVertices;
-        public int[] pickTimes;
-        public int[][] routes;
-
-        public Tour(int startTime, LinkedList<(int from, int to, int pickTime, int[] route)> solution) {
-            this.startTime = startTime;
-            pickVertices = new int[solution.Count - 1];
-            pickTimes = new int[solution.Count - 1];
-            routes = new int[solution.Count][];
-            var first = solution.First;
-            Length = first.Value.route.Length;
-            routes[0] = first.Value.route;
-
-            int i = 0;
-            var node = first.Next;
-            while (node != null) {
-                var value = node.Value;
-                pickVertices[i] = value.from;
-                pickTimes[i] = value.pickTime;
-                routes[i + 1] = value.route;
-                Length += value.pickTime + value.route.Length;
-                i++;
-                node = node.Next;
-            }
-        }
-
-        public IEnumerator<int> GetEnumerator() {
-            return new TourEnum(this);
-        }
-
-        IEnumerator IEnumerable.GetEnumerator() {
-            return (IEnumerator)GetEnumerator();
-        }
-
-        public static IEnumerator<int> GetArrayEnum(Tour[] tours) {
-            foreach (var tour in tours) {
-                foreach (var vertex in tour) {
-                    yield return vertex;
-                }
-            }
-        }
-    }
-
-    public class TourEnum : IEnumerator<int> {
-        public int Current { get; private set; }
-
-        object IEnumerator.Current => Current;
-        private readonly Tour _tour;
-        private int pickIdx;
-        private int routeIdx;
-        private bool isPicking;
-
-
-        public TourEnum(Tour tour) {
-            _tour = tour;
-
-            pickIdx = 0;
-            routeIdx = -1;
-            isPicking = false;
-        }
-
-        public void Dispose() { }
-
-        public bool MoveNext() {
-            if (!isPicking && routeIdx < _tour.routes[pickIdx].Length - 1) {
-                routeIdx++;
-                Current = _tour.routes[pickIdx][routeIdx];
-                return true;
-            }
-            else if (!isPicking && pickIdx < _tour.pickVertices.Length) {
-                routeIdx = 0;
-                isPicking = true;
-                Current = _tour.pickVertices[pickIdx];
-                return true;
-            }
-            else if (isPicking && routeIdx < _tour.pickTimes[pickIdx] - 1) {
-                routeIdx++;
-                return true;
-            }
-            else if (isPicking && pickIdx < _tour.routes.Length - 1) {
-                pickIdx++;
-                routeIdx = 0;
-                isPicking = false;
-                Current = _tour.routes[pickIdx][routeIdx];
-                return true;
-            }
-
-            return false;
-        }
-
-        public void Reset() {
-            pickIdx = 0;
-            routeIdx = -1;
-            isPicking = false;
+            maxSolverTime = maxClasses * maxItems * (maxPickTime + 50);
         }
     }
 }
