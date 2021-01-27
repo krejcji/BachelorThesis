@@ -2,17 +2,21 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Text;
 
 namespace src_cs {
     class TestingUtils {
         public delegate Tour[][] SearchAlgorithm(WarehouseInstance instance);
 
         public static void RunTests(List<TestScenario> tests, int iterations) {
+            StringBuilder sb = new StringBuilder();
             TextWriter writer = Console.Out;
             Stopwatch stopwatch = new Stopwatch();
             List<TestResult> results = new List<TestResult>();
+            sb.Append("TestScenarioID,Iteration,ElapsedTime,SoC,Makespan\n");
 
-            foreach (var test in tests) {
+            for (int testIdx = 0; testIdx < tests.Count; testIdx++) {
+                var test = tests[testIdx];
                 TestResult result = new TestResult();
                 result.AddScenario(test);
 
@@ -29,12 +33,16 @@ namespace src_cs {
                     int makespan = Tour.GetMakespan(tours);
                     int sumOfCosts = Tour.GetSumOfCosts(tours);
                     result.AddMeasurement((stopwatch.ElapsedMilliseconds, sumOfCosts, makespan, tours));
+                    sb.Append($"{testIdx},{i},{stopwatch.ElapsedMilliseconds},{sumOfCosts},{makespan}\n");
                 }
 
                 result.Evaluate();
                 results.Add(result);
             }
             Console.ReadKey();
+            StreamWriter sw = new StreamWriter("./output.csv");
+            sw.Write(sb.ToString());
+            sw.Close();
 
             /*
             void LogResults() {
@@ -98,6 +106,8 @@ namespace src_cs {
             {
                 SolverType.CBS => new CBS(instance),
                 SolverType.PrioritizedPlanner => new PrioritizedPlanner(instance),
+                SolverType.PrioritizedPlannerClassesL => new PrioritizedPlanner(instance, PrioritizedPlanner.Heuristic.ClassesLow),
+                SolverType.PrioritizedPlannerClassesH => new PrioritizedPlanner(instance, PrioritizedPlanner.Heuristic.ClassesHigh),
                 SolverType.Heuristic => null,
                 _ => throw new NotImplementedException("Solver not implemented."),
             };
@@ -107,6 +117,8 @@ namespace src_cs {
     public enum SolverType {
         CBS,
         PrioritizedPlanner,
+        PrioritizedPlannerClassesL,
+        PrioritizedPlannerClassesH,
         Heuristic
     }
 }

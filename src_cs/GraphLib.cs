@@ -24,6 +24,11 @@ namespace src_cs {
             edges.Add(edge);
         }
     }
+    
+    public sealed class StagingVertex : Vertex {
+        public StagingVertex(int index) :base(index) { }
+        public StagingVertex(int index, Point coordinates) : base(index, coordinates) { }
+    }
 
     public sealed class StorageVertex : Vertex {
         public int[,] itemsLeft;

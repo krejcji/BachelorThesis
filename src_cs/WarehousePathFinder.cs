@@ -7,8 +7,17 @@ namespace src_cs {
 
             var tests = new List<TestScenario>();
             
-            tests.Add(new TestScenario(SolverType.CBS, InstanceDescription.GetSmall()));
-            tests.Add(new TestScenario(SolverType.PrioritizedPlanner, InstanceDescription.GetSmall()));
+            tests.Add(new TestScenario(SolverType.PrioritizedPlannerClassesH, InstanceDescription.Test1()));
+            tests.Add(new TestScenario(SolverType.PrioritizedPlannerClassesH, InstanceDescription.Test2()));
+            tests.Add(new TestScenario(SolverType.PrioritizedPlannerClassesH, InstanceDescription.Test3()));
+            tests.Add(new TestScenario(SolverType.PrioritizedPlannerClassesH, InstanceDescription.Test4()));
+            tests.Add(new TestScenario(SolverType.PrioritizedPlannerClassesH, InstanceDescription.Test5()));
+            tests.Add(new TestScenario(SolverType.PrioritizedPlannerClassesH, InstanceDescription.Test6()));
+            tests.Add(new TestScenario(SolverType.PrioritizedPlannerClassesH, InstanceDescription.Test7()));
+            tests.Add(new TestScenario(SolverType.PrioritizedPlannerClassesH, InstanceDescription.Test8()));
+            tests.Add(new TestScenario(SolverType.PrioritizedPlannerClassesH, InstanceDescription.Test9()));
+            tests.Add(new TestScenario(SolverType.PrioritizedPlannerClassesH, InstanceDescription.Test10()));
+
 
             TestingUtils.RunTests(tests, 5);
             /*

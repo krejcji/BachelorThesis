@@ -14,11 +14,14 @@ namespace src_cs {
             root.CalculateInitRoutes(instance.graph, solver);
             queue.Enqueue(root, root.cost);
 
+            int counter = 0;
+
             while (queue.Count != 0) {
                 var currNode = queue.Dequeue();
                 var foundConflict = FindConflicts(currNode.solution, out var conflict);
                 if (!foundConflict) {
                     Console.WriteLine("Found solution.");
+                    solver.PrintStatistic();
                     return currNode.solution;
                 }
                 var constraints = conflict.MakeConstraints();
@@ -33,6 +36,10 @@ namespace src_cs {
                     queue.Enqueue(right, right.cost);
                 }
                 // TODO: Special constraints & better priority heuristic
+                counter++;
+                if (counter % 10 == 0) {
+                    solver.PrintStatistic();
+                }
             }
             return null;
         }

@@ -59,7 +59,7 @@ namespace src_cs {
                 // Look for vertex conflicts.
                 for (int i = 0; i < agents; i++) {
                     if (nodesVisitors0[currVertices[i]].Count > 1) {
-                        if (currVertices[i] == 0) continue;
+                        if (currVertices[i] == 0 || instance.graph.vertices[currVertices[i]] is StagingVertex) continue;
 
                         // Report conflict and clean up the lists.
                         var visitList = nodesVisitors0[currVertices[i]];
@@ -126,7 +126,7 @@ namespace src_cs {
                         nextVertices[i] = enums[i].Current;
                     }
                     else {
-                        nextVertices[i] = currVertices[i];
+                        nextVertices[i] = 0;
                     }
                 }
             }

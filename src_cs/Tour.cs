@@ -4,6 +4,11 @@ using System.Collections.Generic;
 
 public sealed class Tour : IEnumerable<int> {
     public int Length { get; private set; }
+    public int Distance {     // Distance is equal to the number of edges
+        get {
+            return Length - 1; 
+        }
+    }
     public int startTime;
     public int[] pickVertices;
     public int[] pickTimes;
@@ -35,7 +40,7 @@ public sealed class Tour : IEnumerable<int> {
             Console.WriteLine($"i={i++} v={vertex}");
         }
         Console.ReadKey();
-        */
+        */        
         Length += 1;
     }
 
@@ -47,16 +52,18 @@ public sealed class Tour : IEnumerable<int> {
         return (IEnumerator)GetEnumerator();
     }
 
-    public static IEnumerator<int> GetArrayEnum(Tour[] tours) {
-        if (tours[0] == null)
-            yield return 0;
-        else {
+    public static IEnumerator<int> GetArrayEnum(Tour[] tours) {                
             foreach (var tour in tours) {
-                foreach (var vertex in tour) {
-                    yield return vertex;
+                if (tour == null) {
+                    yield return 0;
+                }
+                else {
+                    foreach (var vertex in tour) {
+                        yield return vertex;
+                    }
                 }
             }
-        }
+        
     }
 
     public static int GetSumOfCosts(Tour[][] solution) {

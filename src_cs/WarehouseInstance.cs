@@ -50,7 +50,7 @@ namespace src_cs {
                         }
                     }
                     else if (grid[i, j] is StagingArea) {
-                        tmpGrid[i, j] = new Vertex(ctr++, new System.Drawing.Point(i, j));
+                        tmpGrid[i, j] = new StagingVertex(ctr++, new System.Drawing.Point(i, j));
                     }
                 }
             }
@@ -136,11 +136,94 @@ namespace src_cs {
         public StorageDescription storageDescription;
         public OrdersDescription ordersDescription;
 
+        public static InstanceDescription Test1() {
+            var id = new InstanceDescription();
+            id.layout = new WarehouseLayout(10, 3, 10, false);
+            id.storageDescription = new StorageDescription(5, true, 200);
+            id.ordersDescription = new OrdersDescription(5, 3, 0, 6, 0);
+            return id;
+        }
+        public static InstanceDescription Test2() {
+            var id = new InstanceDescription();
+            id.layout = new WarehouseLayout(10, 3, 10, false);
+            id.storageDescription = new StorageDescription(5, true, 200);
+            id.ordersDescription = new OrdersDescription(8, 3, 0, 6, 0);
+            return id;
+        }
+
+        public static InstanceDescription Test3() {
+            var id = new InstanceDescription();
+            id.layout = new WarehouseLayout(10, 3, 10, false);
+            id.storageDescription = new StorageDescription(5, true, 200);
+            id.ordersDescription = new OrdersDescription(11, 3, 0, 6, 0);
+            return id;
+        }
+        public static InstanceDescription Test4() {
+            var id = new InstanceDescription();
+            id.layout = new WarehouseLayout(10, 3, 10, false);
+            id.storageDescription = new StorageDescription(5, true, 200);
+            id.ordersDescription = new OrdersDescription(14, 3, 0, 6, 0);
+            return id;
+        }
+
+        public static InstanceDescription Test5() {
+            var id = new InstanceDescription();
+            id.layout = new WarehouseLayout(10, 3, 10, false);
+            id.storageDescription = new StorageDescription(5, true, 200);
+            id.ordersDescription = new OrdersDescription(17, 3, 0, 6, 0);
+            return id;
+        }
+
+        
+        public static InstanceDescription Test6() {
+            var id = new InstanceDescription();
+            id.layout = new WarehouseLayout(10, 3, 10, false);
+            id.storageDescription = new StorageDescription(5, true, 200);
+            id.ordersDescription = new OrdersDescription(3, 3, 0, 7, 0);
+            return id;
+        }
+        public static InstanceDescription Test7() {
+            var id = new InstanceDescription();
+            id.layout = new WarehouseLayout(10, 3, 10, false);
+            id.storageDescription = new StorageDescription(5, true, 200);
+            id.ordersDescription = new OrdersDescription(3, 3, 0, 8, 0);
+            return id;
+        }
+        public static InstanceDescription Test8() {
+            var id = new InstanceDescription();
+            id.layout = new WarehouseLayout(10, 3, 10, false);
+            id.storageDescription = new StorageDescription(5, true, 200);
+            id.ordersDescription = new OrdersDescription(3, 3, 0, 9, 0);
+            return id;
+        }
+        public static InstanceDescription Test9() {
+            var id = new InstanceDescription();
+            id.layout = new WarehouseLayout(10, 3, 10, false);
+            id.storageDescription = new StorageDescription(5, true, 200);
+            id.ordersDescription = new OrdersDescription(3, 3, 0, 10, 0);
+            return id;
+        }
+        public static InstanceDescription Test10() {
+            var id = new InstanceDescription();
+            id.layout = new WarehouseLayout(10, 3, 10, false);
+            id.storageDescription = new StorageDescription(5, true, 200);
+            id.ordersDescription = new OrdersDescription(3, 3, 0, 11, 0);
+            return id;
+        }
+
+        public static InstanceDescription GetTiny() {
+            var id = new InstanceDescription();
+            id.layout = new WarehouseLayout(5, 3, 5, false);
+            id.storageDescription = new StorageDescription(3, true, 30);
+            id.ordersDescription = new OrdersDescription(7, 3, 1, 7, 3);
+            return id;
+        }
+
         public static InstanceDescription GetSmall() {
             var id = new InstanceDescription();
             id.layout = new WarehouseLayout(10, 3, 10, false);
             id.storageDescription = new StorageDescription(5, true, 500);
-            id.ordersDescription = new OrdersDescription(2,5,2,10,2);
+            id.ordersDescription = new OrdersDescription(7,3,1,7,3);
             return id;
         }
         public static InstanceDescription GetMedium() {

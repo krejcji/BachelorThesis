@@ -202,6 +202,12 @@ namespace src_cs {
         readonly bool[][] isVisited;
         readonly ulong[][][] sets;
         readonly int timeLimit;
+        long[] totalTime;
+        long[] totalLength;
+        int[] totalConstraints;
+        int[] totalLocations;
+        int[] toursFound;
+
 
         public GTSPSolver(int maxClasses, int maxItems, int maxTime) {
             so = new SetOperations(maxClasses);
@@ -223,6 +229,13 @@ namespace src_cs {
             for (int i = 0; i < isVisited.Length; i++) {
                 isVisited[i] = new bool[timeLimit];
             }
+
+            // Init logging variables
+            totalTime = new long[17];
+            totalLength = new long[17];
+            totalLocations = new int[17];
+            totalConstraints = new int[17];
+            toursFound = new int[17];
         }
 
         public void Init() {
@@ -234,7 +247,7 @@ namespace src_cs {
                 for (int j = 0; j < sets[i].Length; j++) {
                     Array.Clear(sets[i][j], 0, so.longsUsed);
                 }
-            }
+            }            
         }
 
         public Tour SolveGTSP(Graph graph, List<Constraint> constraints, OrderInstance order, int timeOffset) {
@@ -248,7 +261,18 @@ namespace src_cs {
                     sortedList.Add(constraints[i].time, new List<int>() { constraints[i].vertex });
                 }
             }
-            return FindShortestTour(graph, sortedList, order, timeOffset);
+            var timer = new System.Diagnostics.Stopwatch();
+
+            timer.Start();
+            var result = FindShortestTour(graph, sortedList, order, timeOffset);
+            timer.Stop();
+            totalTime[order.classes[^1]] += timer.ElapsedMilliseconds;
+            toursFound[order.classes[^1]]++;
+            totalLength[order.classes[^1]] += result.Length;
+            totalConstraints[order.classes[^1]] += constraints.Count;
+            totalLocations[order.classes[^1]] += order.vertices.Length;
+
+            return result;
         }
 
         public Tour FindShortestTour(Graph graph, SortedList<int, List<int>> constraints, OrderInstance order, int timeOffset) {
@@ -336,6 +360,7 @@ namespace src_cs {
             return new Tour(timeOffset, solution);
 
             (int from, int to, int pickTime, int[] route) Backtrack(int visitTime, int lastVertex) {
+                Array.Clear(shortestRoutesBck, 0, shortestRoutesBck.Length);
                 for (int i = 0; i < vertices.Length; i++) {
                     int vClass = classes[i];
                     //int pickTime = order.pickTimes[i];
@@ -377,7 +402,7 @@ namespace src_cs {
                 int routeExtension = 1;
                 while (routeExtension <= visitTime) {
                     for (int i = 0; i < vertices.Length; i++) {
-                        if (shortestRoutesBck[i] == 0) continue;
+                        // if (shortestRoutesBck[i] == 0) continue;
                         int vClass = classes[i];
                         if (classesLeft[vClass] == 0) continue;
                         int vTime = visitTime - shortestRoutesBck[i] - routeExtension;
@@ -415,6 +440,21 @@ namespace src_cs {
             }
             // maxTime must be greater than the timespan of all orders of agent summed
             maxSolverTime = maxClasses * maxItems * (maxPickTime + 50);
+        }
+
+        public void PrintStatistic() {
+            Console.WriteLine("The statistics of GTSP solver:");
+            for (int i = 0; i < totalTime.Length; i++) {
+                if (totalTime[i] != 0) {
+                    Console.WriteLine($"  Unique item classes: {i}");
+                    Console.WriteLine($"  Avg. pick locations: {totalLocations[i]/toursFound[i]}");                    
+                    Console.WriteLine($"  Tours found:         {toursFound[i]}");
+                    Console.WriteLine($"  Average tour length: {totalLength[i]/toursFound[i]}");
+                    Console.WriteLine($"  Average constraints: {totalConstraints[i]/toursFound[i]}");
+                    Console.WriteLine($"  Avg solve time (ms): {totalTime[i]/toursFound[i]}");
+                    Console.WriteLine();
+                }
+            }
         }
     }
 }
