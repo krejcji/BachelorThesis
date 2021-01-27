@@ -2,7 +2,15 @@
 
 ## Progress report
 
+**13.1.**
 
+* Debugging
+*  Logging základních statistik výpočtu do csv souboru pro další zpracování a vizualizaci
+
+**5.1.**
+
+* PrioritizedPlanner heuristiky
+  * podle počtu lokací/tříd
 
 **25.11.**
 
