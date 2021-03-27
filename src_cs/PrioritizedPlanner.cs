@@ -1,11 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 
-
 namespace src_cs {
     class PrioritizedPlanner : ConstraintSolver {
         public delegate int HeuristicMetric(OrderInstance i);
-        readonly IEnumerable<(int, int)> heuristicEnum;
+        readonly protected IEnumerable<(int, int)> heuristicEnum;
+        Tour[][] solution;
 
         public PrioritizedPlanner(WarehouseInstance instance) : base(instance) {
             heuristicEnum = DefaultEnum(instance.orders);
@@ -15,6 +15,7 @@ namespace src_cs {
             heuristicEnum = h switch {
                 Heuristic.ClassesHigh => LessClassesLast(instance.orders),
                 Heuristic.ClassesLow => LessClassesFirst(instance.orders),
+                Heuristic.Default => DefaultEnum(instance.orders),
                 _ => throw new NotImplementedException(),
             };
         }
@@ -23,11 +24,10 @@ namespace src_cs {
             this.heuristicEnum = HeuristicEnum(instance.orders, h, false);
         }
 
-        public override Tour[][] FindTours() {
-            Tour[][] solution;
+        public override Tour[][] FindTours() {            
             List<Constraint> constraints = new List<Constraint>();
 
-            // Init tours array
+            // Init solution array
             solution = new Tour[agents][];
             for (int i = 0; i < agents; i++) {
                 solution[i] = new Tour[instance.orders[i].Length];
@@ -39,21 +39,21 @@ namespace src_cs {
             foreach (var (tour,agent) in heuristicEnum)  {
                 constraints.Clear();
                 int offsetTime = GetOrderOffset(solution, agent, tour);
-
-                while (true) {
-                    solution[agent][tour] = solver.SolveGTSP(instance.graph, constraints, instance.orders[agent][tour], offsetTime);
-
-                    if (FindConflicts(solution, out Conflict c)) {
-                        var conf = c.MakeConstraints();
-                        var constraint = conf.Item1[0].agent == agent ? conf.Item1 : conf.Item2;
-                        for (int k = 0; k < conf.Item1.Length; k++) {
-                            constraints.Add(constraint[k]);
+                
+                // Add all constraints
+                for (int i = 0; i < solution.Length; i++) {
+                    for (int j = 0; j < solution[i].Length; j++) {
+                        if (solution[i][j] == null || i == agent) continue;
+                        int time = solution[i][j].startTime;
+                        
+                        foreach (var vertex in solution[i][j]) {
+                            constraints.Add(new Constraint(time++, vertex, agent));
                         }
                     }
-                    else
-                        break;
-                }
+                }                              
 
+                Console.WriteLine($"Agent: {agent}, tour: {tour}, constraints: {constraints.Count}");
+                solution[agent][tour] = solver.SolveGTSP(instance.graph, constraints, instance.orders[agent][tour], offsetTime);                
             }
 
             System.Console.WriteLine("PP found a solution.");
@@ -61,22 +61,9 @@ namespace src_cs {
             return solution;
         }
 
-        private int GetOrderOffset(Tour[][] solution, int agent, int orderIdx) {
-            int offset = 0;
-            for (int i = 0; i < orderIdx; i++) {
-                offset += solution[agent][i].Length;
-            }
-            return offset;
-        }
-
-        private static int GetMaxTours(OrderInstance[][] orders) {
-            var agents = orders;
-            int max = int.MinValue;
-            foreach (var agent in agents) {
-                max = Math.Max(max, agent.Length);
-            }
-            return max;
-        }
+        public override string[] GetStats() {
+            return solver?.GetStats();
+        }        
 
         private static int GetItemsCount(OrderInstance o) {
             return o.positions.Length;
@@ -112,7 +99,7 @@ namespace src_cs {
             }
         }
 
-        private static IEnumerable<(int, int)> DefaultEnum(OrderInstance[][] orders) {
+        protected static IEnumerable<(int, int)> DefaultEnum(OrderInstance[][] orders) {
             for (int agent = 0; agent < orders.Length; agent++) {
                 for (int order = 0; order < orders[agent].Length; order++) {
                     yield return (order, agent);
@@ -137,6 +124,7 @@ namespace src_cs {
         }    
         
         public enum Heuristic {
+            Default,
             ClassesLow,
             ClassesHigh
         }
