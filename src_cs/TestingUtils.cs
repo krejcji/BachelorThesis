@@ -10,10 +10,12 @@ namespace src_cs {
 
         public static void RunTests(List<TestScenario> tests, int iterations) {
             StringBuilder sb = new StringBuilder();
+            StringBuilder header = new StringBuilder();
             TextWriter writer = Console.Out;
             Stopwatch stopwatch = new Stopwatch();
             List<TestResult> results = new List<TestResult>();
-            sb.Append("TestScenarioID,Iteration,ElapsedTime,SoC,Makespan\n");
+            header.Append("TestScenarioID,Iteration,ElapsedTime,SoC,Makespan");
+            string statsHeader = null;
 
             for (int testIdx = 0; testIdx < tests.Count; testIdx++) {
                 var test = tests[testIdx];
@@ -32,17 +34,27 @@ namespace src_cs {
 
                     int makespan = Tour.GetMakespan(tours);
                     int sumOfCosts = Tour.GetSumOfCosts(tours);
-                    result.AddMeasurement((stopwatch.ElapsedMilliseconds, sumOfCosts, makespan, tours));
+                    result.AddMeasurement((stopwatch.ElapsedMilliseconds, sumOfCosts, makespan, tours));                    
+                    var stats = solver.GetStats();
+                    statsHeader = stats[0];
                     sb.Append($"{testIdx},{i},{stopwatch.ElapsedMilliseconds},{sumOfCosts},{makespan}\n");
+                    //sb.Append($",{stats[1]}\n");
                 }
 
                 result.Evaluate();
                 results.Add(result);
             }
-            Console.ReadKey();
-            StreamWriter sw = new StreamWriter("./output.csv");
+
+            DateTime date = DateTime.Now;
+            StreamWriter sw = new StreamWriter($"./test_output_{date.ToString("yyMMdd_HH_mm")}.csv");
+            //header.Append($",{statsHeader}");
+            sw.Write(header + "\n");
             sw.Write(sb.ToString());
             sw.Close();
+
+            Console.WriteLine();
+
+            Console.ReadKey();
 
             /*
             void LogResults() {
@@ -108,7 +120,11 @@ namespace src_cs {
                 SolverType.PrioritizedPlanner => new PrioritizedPlanner(instance),
                 SolverType.PrioritizedPlannerClassesL => new PrioritizedPlanner(instance, PrioritizedPlanner.Heuristic.ClassesLow),
                 SolverType.PrioritizedPlannerClassesH => new PrioritizedPlanner(instance, PrioritizedPlanner.Heuristic.ClassesHigh),
-                SolverType.Heuristic => null,
+                SolverType.PrioritizedPlannerGrad => new GradualPrioritizedPlanner(instance),
+                SolverType.PrioritizedPlannerGradClassesL => new GradualPrioritizedPlanner(instance, PrioritizedPlanner.Heuristic.ClassesLow),
+                SolverType.PrioritizedPlannerGradClassesH => new GradualPrioritizedPlanner(instance, PrioritizedPlanner.Heuristic.ClassesHigh),
+                SolverType.SingleAgent => new SingleAgentPlanner(instance),
+                SolverType.SimpleNoBlock => new SimpleNoBlockPlanner(instance),
                 _ => throw new NotImplementedException("Solver not implemented."),
             };
         }
@@ -119,6 +135,10 @@ namespace src_cs {
         PrioritizedPlanner,
         PrioritizedPlannerClassesL,
         PrioritizedPlannerClassesH,
-        Heuristic
+        PrioritizedPlannerGrad,
+        PrioritizedPlannerGradClassesL,
+        PrioritizedPlannerGradClassesH,
+        SingleAgent,
+        SimpleNoBlock
     }
 }

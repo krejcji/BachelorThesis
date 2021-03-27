@@ -226,12 +226,15 @@ namespace src_cs {
                 foreach (var time in constraints.Keys) {
                     if (time >= minTime && time <= maxTime) {
                         int relativeTime = time - minTime;
-                        for (int i = 0; i < constraints[time].Count; i++) {
+                        var currConstraints = constraints[time];
+                        for (int i = 0; i < currConstraints.Count; i++) {
                             // Cannot pick at the vertex
-                            if (relativeTime <= pickTime && pickVertex == constraints[time][i]) {
+                            // TODO: Added relative time != 0
+                            if (//relativeTime != 0 && 
+                                relativeTime <= pickTime && pickVertex == currConstraints[i]) {
                                 return (0, null);
                             }
-                            else if (relativeTime > pickTime && route.vertices[relativeTime - pickTime] == constraints[time][i]) {
+                            else if (relativeTime > pickTime && route.vertices[relativeTime - pickTime] == currConstraints[i]) {
                                 if (reverseSearch) {
                                     route = AStar(pickVertex, target, constraints, realTime, reverseSearch);
                                 }
@@ -256,7 +259,8 @@ namespace src_cs {
             }
         }
 
-        public (int, int[]) AStar(int x, int y, SortedList<int, List<int>> constraints, int beginTime, bool reverseSearch) {
+        public (int, int[]) AStar(int x, int y, SortedList<int, List<int>> constraints, 
+                                  int beginTime, bool reverseSearch=false, int steps = 0) {
             if (reverseSearch) {
                 var tmp = x;
                 x = y;
@@ -270,8 +274,15 @@ namespace src_cs {
                 queueCacheA[currNode.index] = null;
                 var currRouteCost = currNode.routeCost;
 
+                if (steps != 0) {
+                    if (currNode.routeCost > steps)
+                        continue;
+                }
+
                 // If goal node.
                 if (currNode.index == y) {
+                    if (steps != 0 && currNode.routeCost != steps)
+                        goto ExpandNode;
                     var result = new int[currNode.routeCost + 1];
                     result[currNode.routeCost] = currNode.index;
                     for (int i = currNode.routeCost; i > 0; i--) {
@@ -284,10 +295,11 @@ namespace src_cs {
                     return (currRouteCost, result);
                 }
 
+            ExpandNode:
                 int heuristicCost;
                 int neighborRouteCost = currNode.routeCost + 1;
                 int targetOffsetTime = 0;
-
+            
                 // Stay at node for another time step, if not constrained
                 //TODO: Only before a blocked vertex?
                 if (constraints != null) {
@@ -307,11 +319,15 @@ namespace src_cs {
                 foreach (var neighbor in vertices[currNode.index].edges) {
                     int neighborIdx = neighbor.x == currNode.index ? neighbor.y : neighbor.x;
 
+                    // TODO: Disable return edges?
+                    /*
                     // No return edges.
                     if (currNode.predecessor != null) {
                         if (neighborIdx == currNode.predecessor.index) {
                             continue;
                         }
+                        // TODO: Check
+                        
                         else if (currNode.predecessor.index == currNode.index) {
                             var tmp = currNode.predecessor;
                             while (tmp.predecessor != null && tmp.index == currNode.index) {
@@ -319,8 +335,9 @@ namespace src_cs {
                             }
                             if (tmp.index == neighborIdx)
                                 continue;
-                        }
+                        }                        
                     }
+                    */
 
                     heuristicCost = neighborRouteCost + distancesCache[neighborIdx][y];
 
@@ -336,7 +353,8 @@ namespace src_cs {
                     ;
                 }
             }
-            throw new ArgumentException("Shortest path not found, check the arguments.");
+            // TODO: Replaced throw exception
+            return (0, null);
 
             void EnqueueNode(int nodeIndex, int routeCost, int heuristicCost, AStarNode prevNode) {
                 AStarNode nextNode = queueCacheA[nodeIndex];
@@ -347,12 +365,13 @@ namespace src_cs {
 
                 if (nextNode != null) {               // update value if better cost and node is not requeued already             
                     if (nextNode.routeCost > routeCost && nextNode.index != nextNode.predecessor.index) {
+                        // TODO: Why?
                         nextNode.routeCost = routeCost;
                         nextNode.predecessor = prevNode;
                         queue.UpdatePriority(nextNode, newCost);
                     }
                 }
-                else {                                // first visiting the vertex or requeue the current vertex
+                else {                                // first time visiting the vertex or requeue the same vertex
                     nextNode = nodeFactory.GetNode(nodeIndex, routeCost, prevNode);
                     queueCacheA[nodeIndex] = nextNode;
                     queue.Enqueue(nextNode, newCost);
@@ -362,7 +381,7 @@ namespace src_cs {
             void CleanUpQueueCache() {
                 queue.Clear();
                 Array.Copy(emptyArr, queueCacheA, queueCacheA.Length);
-                nodeFactory.ResetIndex();
+                nodeFactory.ResetCounter();
             }
 
             static void ReverseRoute(int[] result) {
@@ -389,7 +408,7 @@ namespace src_cs {
 
         public class AStarNodeFactory {
             private readonly AStarNode[] cache;
-            private int index = 0;
+            private int counter = 0;
             public AStarNodeFactory(int capacity) {
                 cache = new AStarNode[capacity];
                 for (int i = 0; i < capacity; i++) {
@@ -399,19 +418,19 @@ namespace src_cs {
 
             public AStarNode GetNode(int vertexIndex, int cost, AStarNode predecessor) {
                 AStarNode node;
-                if (index == cache.Length) {
+                if (counter == cache.Length) {
                     node = new AStarNode();
                     node.InitNode(vertexIndex, cost, predecessor);
                 }
                 else {
-                    node = cache[index++];
+                    node = cache[counter++];
                     node.InitNode(vertexIndex, cost, predecessor);
                 }
                 return node;
             }
 
-            public void ResetIndex() {
-                index = 0;
+            public void ResetCounter() {
+                counter = 0;
             }
         }
 

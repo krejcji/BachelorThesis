@@ -253,6 +253,7 @@ namespace src_cs {
         public Tour SolveGTSP(Graph graph, List<Constraint> constraints, OrderInstance order, int timeOffset) {
             Init();
             var sortedList = new SortedList<int, List<int>>();
+            
             for (int i = 0; i < constraints.Count; i++) {
                 if (sortedList.ContainsKey(constraints[i].time)) {
                     sortedList[constraints[i].time].Add(constraints[i].vertex);
@@ -261,6 +262,7 @@ namespace src_cs {
                     sortedList.Add(constraints[i].time, new List<int>() { constraints[i].vertex });
                 }
             }
+            
             var timer = new System.Diagnostics.Stopwatch();
 
             timer.Start();
@@ -318,7 +320,7 @@ namespace src_cs {
                         var (t, r) = graph.ShortestRoute(vertices[i], targetLoc, pickTimes[i], time + timeOffset, constraints, false, true);
                         if (t == 0) continue;
                         int finishTime = time + t;
-                        if (tMax > finishTime) {   // Found the shortest tour so far
+                        if (tMax > finishTime || bestSol.startTime == int.MaxValue) {   // Found the shortest tour so far
                             tMax = finishTime;
                             bestSol = (finishTime, time, i, r);
                         }
@@ -456,5 +458,37 @@ namespace src_cs {
                 }
             }
         }
+
+        public String[] GetStats() {
+            var stats = new String[2];
+            stats[0] = "toursFound,avgClasses,avgPickLocations,avgTourLength,avgConstraints";            
+            int iterations = 0;
+            long totalTimeSum = 0;
+            long toursFoundSum = 0;
+            long avgClasses = 0;
+            long avgPickLocations = 0;
+            long avgTourLength = 0;
+            long avgConstraints = 0;            
+
+            for (int i = 0; i < totalTime.Length; i++) {
+                if (totalTime[i] != 0) {
+                    iterations++;
+                    toursFoundSum += toursFound[i];
+                    avgClasses += i;
+                    avgPickLocations += totalLocations[i];
+                    avgTourLength += totalLength[i];
+                    avgConstraints = totalConstraints[i];
+                    totalTimeSum += totalTime[i];                    
+                }
+            }
+            if (iterations != 0) {
+                avgClasses /= iterations;
+                avgConstraints /= toursFoundSum;
+                avgPickLocations /= toursFoundSum;                
+                avgTourLength /= toursFoundSum;
+            }
+            stats[1] = $"{toursFoundSum},{avgClasses},{avgPickLocations},{avgTourLength},{avgConstraints}";
+            return stats;
+        }        
     }
 }

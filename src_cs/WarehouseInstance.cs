@@ -1,6 +1,4 @@
 ﻿using System.Collections.Generic;
-using System.Globalization;
-using System.Threading;
 
 namespace src_cs {
     public class WarehouseInstance {
@@ -86,8 +84,6 @@ namespace src_cs {
                 }
             }
 
-
-            ctr = 0;
             var oInstances = new OrderInstance[orders.Length][];
             for (int i = 0; i < orders.Length; i++) {
                 oInstances[i] = new OrderInstance[orders[i].Length];                
@@ -99,7 +95,7 @@ namespace src_cs {
                     }
                     var from = graph.FindLocation(order.from);
                     var to = graph.FindLocation(order.to);
-                    oInstances[i][j] = new OrderInstance(ctr++, orderItems, from.index, to.index, graph);                    
+                    oInstances[i][j] = new OrderInstance(order.orderId, orderItems, from.index, to.index, graph);                    
                 }
             }
             this.orders = oInstances;
@@ -136,6 +132,14 @@ namespace src_cs {
         public StorageDescription storageDescription;
         public OrdersDescription ordersDescription;
 
+        public static InstanceDescription Test0() {
+            var id = new InstanceDescription();
+            id.layout = new WarehouseLayout(10, 3, 10, false);
+            id.storageDescription = new StorageDescription(5, true, 200);
+            id.ordersDescription = new OrdersDescription(3, 3, 0, 6, 0);
+            return id;
+        }
+
         public static InstanceDescription Test1() {
             var id = new InstanceDescription();
             id.layout = new WarehouseLayout(10, 3, 10, false);
@@ -147,7 +151,7 @@ namespace src_cs {
             var id = new InstanceDescription();
             id.layout = new WarehouseLayout(10, 3, 10, false);
             id.storageDescription = new StorageDescription(5, true, 200);
-            id.ordersDescription = new OrdersDescription(8, 3, 0, 6, 0);
+            id.ordersDescription = new OrdersDescription(7, 3, 0, 6, 0);
             return id;
         }
 
@@ -155,14 +159,14 @@ namespace src_cs {
             var id = new InstanceDescription();
             id.layout = new WarehouseLayout(10, 3, 10, false);
             id.storageDescription = new StorageDescription(5, true, 200);
-            id.ordersDescription = new OrdersDescription(11, 3, 0, 6, 0);
+            id.ordersDescription = new OrdersDescription(9, 3, 0, 6, 0);
             return id;
         }
         public static InstanceDescription Test4() {
             var id = new InstanceDescription();
             id.layout = new WarehouseLayout(10, 3, 10, false);
             id.storageDescription = new StorageDescription(5, true, 200);
-            id.ordersDescription = new OrdersDescription(14, 3, 0, 6, 0);
+            id.ordersDescription = new OrdersDescription(11, 3, 0, 6, 0);
             return id;
         }
 
@@ -170,7 +174,7 @@ namespace src_cs {
             var id = new InstanceDescription();
             id.layout = new WarehouseLayout(10, 3, 10, false);
             id.storageDescription = new StorageDescription(5, true, 200);
-            id.ordersDescription = new OrdersDescription(17, 3, 0, 6, 0);
+            id.ordersDescription = new OrdersDescription(13, 3, 0, 6, 0);
             return id;
         }
 
@@ -179,35 +183,43 @@ namespace src_cs {
             var id = new InstanceDescription();
             id.layout = new WarehouseLayout(10, 3, 10, false);
             id.storageDescription = new StorageDescription(5, true, 200);
-            id.ordersDescription = new OrdersDescription(3, 3, 0, 7, 0);
+            id.ordersDescription = new OrdersDescription(7, 3, 0, 7, 0);
             return id;
         }
         public static InstanceDescription Test7() {
             var id = new InstanceDescription();
             id.layout = new WarehouseLayout(10, 3, 10, false);
             id.storageDescription = new StorageDescription(5, true, 200);
-            id.ordersDescription = new OrdersDescription(3, 3, 0, 8, 0);
+            id.ordersDescription = new OrdersDescription(7, 3, 0, 8, 0);
             return id;
         }
         public static InstanceDescription Test8() {
             var id = new InstanceDescription();
             id.layout = new WarehouseLayout(10, 3, 10, false);
             id.storageDescription = new StorageDescription(5, true, 200);
-            id.ordersDescription = new OrdersDescription(3, 3, 0, 9, 0);
+            id.ordersDescription = new OrdersDescription(7, 3, 0, 9, 0);
             return id;
         }
         public static InstanceDescription Test9() {
             var id = new InstanceDescription();
             id.layout = new WarehouseLayout(10, 3, 10, false);
             id.storageDescription = new StorageDescription(5, true, 200);
-            id.ordersDescription = new OrdersDescription(3, 3, 0, 10, 0);
+            id.ordersDescription = new OrdersDescription(7, 3, 0, 10, 0);
             return id;
         }
         public static InstanceDescription Test10() {
             var id = new InstanceDescription();
             id.layout = new WarehouseLayout(10, 3, 10, false);
             id.storageDescription = new StorageDescription(5, true, 200);
-            id.ordersDescription = new OrdersDescription(3, 3, 0, 11, 0);
+            id.ordersDescription = new OrdersDescription(7, 3, 0, 11, 0);
+            return id;
+        }
+
+        public static InstanceDescription Test11() {
+            var id = new InstanceDescription();
+            id.layout = new WarehouseLayout(10, 3, 10, false);
+            id.storageDescription = new StorageDescription(5, true, 200);
+            id.ordersDescription = new OrdersDescription(13, 3, 0, 6, 0);
             return id;
         }
 

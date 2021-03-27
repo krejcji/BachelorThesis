@@ -43,6 +43,10 @@ namespace src_cs {
             }
             return null;
         }
+
+        public override string[] GetStats() {
+            return solver?.GetStats();
+        }
     }
 
     class CBSNode : FastPriorityQueueNode {
@@ -142,7 +146,7 @@ namespace src_cs {
             int offsetTime = 0;
             for (int i = 0; i < constrainedSol.Length; i++) {
                 if (i > 0)
-                    offsetTime += constrainedSol[i - 1].Length;
+                    offsetTime += constrainedSol[i - 1].Distance;
                 constrainedSol[i].startTime = offsetTime;
                 constrainedSol[i] = solver.SolveGTSP(graph, constraints[agentConstrained], orders[agentConstrained][i], offsetTime);
             }
@@ -167,7 +171,7 @@ namespace src_cs {
             for (int i = 0; i < solution.Length; i++) {
                 for (int j = 0; j < solution[i].Length; j++) {
                     if (j > 0)
-                        offsetTime += solution[i][j - 1].Length;
+                        offsetTime += solution[i][j - 1].Distance;
                     solution[i][j] = solver.SolveGTSP(graph, constraints[i], orders[i][j], offsetTime);
                     this.cost += solution[i][j].Length;
                 }

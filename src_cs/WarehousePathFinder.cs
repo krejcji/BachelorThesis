@@ -4,27 +4,67 @@ using System.Collections.Generic;
 namespace src_cs {
     class WarehousePathFinder {
         static void Main(string[] args) {
-
             var tests = new List<TestScenario>();
-            
-            tests.Add(new TestScenario(SolverType.PrioritizedPlannerClassesH, InstanceDescription.Test1()));
-            tests.Add(new TestScenario(SolverType.PrioritizedPlannerClassesH, InstanceDescription.Test2()));
-            tests.Add(new TestScenario(SolverType.PrioritizedPlannerClassesH, InstanceDescription.Test3()));
-            tests.Add(new TestScenario(SolverType.PrioritizedPlannerClassesH, InstanceDescription.Test4()));
-            tests.Add(new TestScenario(SolverType.PrioritizedPlannerClassesH, InstanceDescription.Test5()));
-            tests.Add(new TestScenario(SolverType.PrioritizedPlannerClassesH, InstanceDescription.Test6()));
-            tests.Add(new TestScenario(SolverType.PrioritizedPlannerClassesH, InstanceDescription.Test7()));
-            tests.Add(new TestScenario(SolverType.PrioritizedPlannerClassesH, InstanceDescription.Test8()));
-            tests.Add(new TestScenario(SolverType.PrioritizedPlannerClassesH, InstanceDescription.Test9()));
-            tests.Add(new TestScenario(SolverType.PrioritizedPlannerClassesH, InstanceDescription.Test10()));
+            /*
+            tests.Add(new TestScenario(SolverType.SimpleNoBlock, InstanceDescription.Test1()));
+            tests.Add(new TestScenario(SolverType.SingleAgent, InstanceDescription.Test1()));
+            tests.Add(new TestScenario(SolverType.PrioritizedPlannerGradClassesH, InstanceDescription.Test1()));
+
+            tests.Add(new TestScenario(SolverType.SimpleNoBlock, InstanceDescription.Test2()));
+            tests.Add(new TestScenario(SolverType.SingleAgent, InstanceDescription.Test2()));
+            tests.Add(new TestScenario(SolverType.PrioritizedPlannerGradClassesH, InstanceDescription.Test2()));
+
+            tests.Add(new TestScenario(SolverType.SimpleNoBlock, InstanceDescription.Test3()));
+            tests.Add(new TestScenario(SolverType.SingleAgent, InstanceDescription.Test3()));
+            tests.Add(new TestScenario(SolverType.PrioritizedPlannerGradClassesH, InstanceDescription.Test3()));
+
+            tests.Add(new TestScenario(SolverType.SimpleNoBlock, InstanceDescription.Test4()));
+            tests.Add(new TestScenario(SolverType.SingleAgent, InstanceDescription.Test4()));
+            tests.Add(new TestScenario(SolverType.PrioritizedPlannerGradClassesH, InstanceDescription.Test4()));
+            */
+
+            //tests.Add(new TestScenario(SolverType.SimpleNoBlock, InstanceDescription.Test5()));
+            //tests.Add(new TestScenario(SolverType.SingleAgent, InstanceDescription.Test5()));
+            tests.Add(new TestScenario(SolverType.PrioritizedPlannerGradClassesH, InstanceDescription.Test5()));
+
+            //tests.Add(new TestScenario(SolverType.CBS, InstanceDescription.Test0()));
+            //tests.Add(new TestScenario(SolverType.CBS, InstanceDescription.Test2()));
+            //tests.Add(new TestScenario(SolverType.PrioritizedPlannerClassesH, InstanceDescription.Test11()));
+            //tests.Add(new TestScenario(SolverType.PrioritizedPlannerClassesH, InstanceDescription.Test10()));
+
+            //tests.Add(new TestScenario(SolverType.PrioritizedPlannerClassesH, InstanceDescription.Test1()));
+            //tests.Add(new TestScenario(SolverType.PrioritizedPlannerClassesH, InstanceDescription.Test2()));
+            //tests.Add(new TestScenario(SolverType.PrioritizedPlannerClassesH, InstanceDescription.Test3()));
+            //tests.Add(new TestScenario(SolverType.PrioritizedPlannerClassesH, InstanceDescription.Test4()));
+
+            //tests.Add(new TestScenario(SolverType.PrioritizedPlannerClassesH, InstanceDescription.Test6()));
+            //tests.Add(new TestScenario(SolverType.PrioritizedPlannerClassesH, InstanceDescription.Test7()));
+            //tests.Add(new TestScenario(SolverType.PrioritizedPlannerClassesH, InstanceDescription.Test8()));
+            //tests.Add(new TestScenario(SolverType.PrioritizedPlannerClassesH, InstanceDescription.Test9()));
+
+            //tests.Add(new TestScenario(SolverType.PrioritizedPlannerClassesL, InstanceDescription.Test1()));
+            //tests.Add(new TestScenario(SolverType.PrioritizedPlannerClassesL, InstanceDescription.Test2()));
+            //tests.Add(new TestScenario(SolverType.PrioritizedPlannerClassesL, InstanceDescription.Test3()));
+            //tests.Add(new TestScenario(SolverType.PrioritizedPlannerClassesL, InstanceDescription.Test4()));
+
+            //tests.Add(new TestScenario(SolverType.PrioritizedPlannerClassesL, InstanceDescription.Test6()));
+            //tests.Add(new TestScenario(SolverType.PrioritizedPlannerClassesL, InstanceDescription.Test7()));
+            //tests.Add(new TestScenario(SolverType.PrioritizedPlannerClassesL, InstanceDescription.Test8()));
+            //tests.Add(new TestScenario(SolverType.PrioritizedPlannerClassesL, InstanceDescription.Test9()));
+
+            //tests.Add(new TestScenario(SolverType.PrioritizedPlannerClassesH, InstanceDescription.Test10()));
 
 
             TestingUtils.RunTests(tests, 5);
             /*
             var wi = InstanceParser.Parse2("../../../../../src_py/test_warehouse.txt");
-            var cbs = new CBS(wi, 80000);
-            cbs.FindTours();
+            var sap = new SingleAgentPlanner(wi);
+            sap.FindTours();
+            //var cbs = new CBS(wi, 80000);
+            //cbs.FindTours();
             */
+
+            
             
             //TestingUtils.RunTests(PrioritizedPlanner, 10);
 

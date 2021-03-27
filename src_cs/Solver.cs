@@ -4,15 +4,36 @@ using System.Collections.Generic;
 namespace src_cs {
     public abstract class Solver {
         public abstract Tour[][] FindTours();
+        public virtual string[] GetStats() {            
+            return new string[]{"empty", "0"};
+        }
+
+        public static int GetOrderOffset(Tour[][] solution, int agent, int orderIdx) {
+            int offset = 0;
+            for (int i = 0; i < orderIdx; i++) {
+                offset += solution[agent][i].Distance;
+            }
+            return offset;
+        }
+
+        public static int GetMaxTours(OrderInstance[][] orders) {
+            var agents = orders;
+            int max = int.MinValue;
+            foreach (var agent in agents) {
+                max = Math.Max(max, agent.Length);
+            }
+            return max;
+        }
     }
 
     abstract class ConstraintSolver : Solver {
         readonly protected WarehouseInstance instance;
         readonly protected GTSPSolver solver;
+        readonly protected int maxTime;
+        readonly protected int agents;
         protected List<int>[] nodesVisitors0;
         protected List<int>[] nodesVisitors1;
-        protected readonly int maxTime;
-        protected readonly int agents;
+        
 
         protected ConstraintSolver(WarehouseInstance instance) {
             this.instance = instance;
