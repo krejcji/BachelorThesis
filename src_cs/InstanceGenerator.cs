@@ -99,11 +99,12 @@ namespace src_cs {
                 orders[i] = new Order[rand.Next(averageOrders - orderVar, averageOrders + orderVar+1)];
             }
 
+            int orderId = 0;
             for (int i = 0; i < agents; i++) {
                 for (int j = 0; j < orders[i].Length; j++) {
                     int orderLength = rand.Next(averageItems - itemVar, averageItems + itemVar + 1);
                     int[] items = new int[orderLength];
-                    orders[i][j] = new Order(new Point(2*i, 2), new Point(2*i, 2), items);
+                    orders[i][j] = new Order(orderId++, new Point(2*i, 2), new Point(2*i, 2), items);
                     for (int k = 0; k < orderLength; k++) {
                         while (true) {
                             int item = rand.Next(uniqueItems);
@@ -160,11 +161,13 @@ namespace src_cs {
     }
 
     public class Order {
+        public int orderId;
         public Point from;
         public Point to;
         public int[] items;
 
-        public Order(Point from, Point to, int[] items) {
+        public Order(int orderId, Point from, Point to, int[] items) {
+            this.orderId = orderId;
             this.from = from;
             this.to = to;
             this.items = items;

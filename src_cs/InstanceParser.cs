@@ -220,7 +220,7 @@ namespace src_cs {
                         from = new Point(3 + i, 3);
                         to = new Point(3 + i, 3);
                     }
-                    orders[i][j] = new Order(from, to, itemsArr);
+                    orders[i][j] = new Order(orderId, from, to, itemsArr);
                     j++;
                 }
                 i++;
