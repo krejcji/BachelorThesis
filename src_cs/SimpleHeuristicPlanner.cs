@@ -71,10 +71,10 @@ namespace src_cs {
                     var curVertex = vertices[vertexId];
                     
 
-                    var (dist,path) = graph.ShortestRoute(startLoc, curVertex, 0, 0, null, false, false);
+                    var (dist,path) = graph.ShortestRoute(startLoc, curVertex, 0, 0, null, false);
                     int currDistance = dist + ((selected.Count+1) * pickTimes[vertexId]);
                     foreach (var selVal in selected) {                        
-                        (dist, path) = graph.ShortestRoute(selVal.vertex, curVertex, 0, 0, null, false, false);
+                        (dist, path) = graph.ShortestRoute(selVal.vertex, curVertex, 0, 0, null, false);
                         currDistance += dist;                        
                     }
 

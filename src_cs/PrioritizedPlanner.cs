@@ -1,14 +1,16 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 
 namespace src_cs {
     class PrioritizedPlanner : ConstraintSolver {
         public delegate int HeuristicMetric(OrderInstance i);
         readonly protected IEnumerable<(int, int)> heuristicEnum;
-        Tour[][] solution;
+        Tour[][] solution;        
 
         public PrioritizedPlanner(WarehouseInstance instance) : base(instance) {
             heuristicEnum = DefaultEnum(instance.orders);
+            constraints = new ConstraintManagerDense();
         }
 
         public PrioritizedPlanner(WarehouseInstance instance, Heuristic h) : base(instance) {
@@ -18,22 +20,20 @@ namespace src_cs {
                 Heuristic.Default => DefaultEnum(instance.orders),
                 _ => throw new NotImplementedException(),
             };
+            constraints = new ConstraintManagerDense();
         }
 
         public PrioritizedPlanner(WarehouseInstance instance, HeuristicMetric h) :base(instance) {
             this.heuristicEnum = HeuristicEnum(instance.orders, h, false);
+            constraints = new ConstraintManagerDense();
         }
 
         public override Tour[][] FindTours() {            
-            List<Constraint> constraints = new List<Constraint>();
-
             // Init solution array
             solution = new Tour[agents][];
             for (int i = 0; i < agents; i++) {
                 solution[i] = new Tour[instance.orders[i].Length];
             }
-            
-            var orders = instance.orders;
 
             // Calculate the non-conflicting routes based on a heuristic
             foreach (var (tour,agent) in heuristicEnum)  {
@@ -43,17 +43,27 @@ namespace src_cs {
                 // Add all constraints
                 for (int i = 0; i < solution.Length; i++) {
                     for (int j = 0; j < solution[i].Length; j++) {
-                        if (solution[i][j] == null || i == agent) continue;
-                        int time = solution[i][j].startTime;
-                        
-                        foreach (var vertex in solution[i][j]) {
-                            constraints.Add(new Constraint(time++, vertex, agent));
-                        }
+                        if (solution[i][j] == null || i == agent) continue;                      
+
+                        constraints.AddConstraints(solution[i][j]);
                     }
                 }                              
 
                 Console.WriteLine($"Agent: {agent}, tour: {tour}, constraints: {constraints.Count}");
-                solution[agent][tour] = solver.SolveGTSP(instance.graph, constraints, instance.orders[agent][tour], offsetTime);                
+                //solution[agent][tour] = solver.SolveGTSP(instance.graph, constraints, instance.orders[agent][tour], offsetTime);                
+                var sw = new Stopwatch();
+                sw.Start();
+                solution[agent][tour] = solver.SolveGTSP(instance.graph, constraints, instance.orders[agent][tour], offsetTime);
+                sw.Stop();
+                var t1 = sw.ElapsedMilliseconds;
+                sw.Reset();
+                sw.Start();
+                var tMax = solution[agent][tour].Length;
+                var altSol = solver.DepthLimitedGTSP(instance.graph, constraints, instance.orders[agent][tour], offsetTime, tMax);
+                sw.Stop();
+                var t2 = sw.ElapsedMilliseconds;
+                Console.WriteLine($"Standard: {t1}, New: {t2}");
+
             }
 
             System.Console.WriteLine("PP found a solution.");

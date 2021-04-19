@@ -150,6 +150,7 @@ namespace src_cs {
                     }
                 }
 
+                ConstraintManager cm = new ConstraintManagerSparse();
                 // For each order, calculate one shortest route.
                 foreach (var agent in orderVertices) {
                     foreach (var order in agent) {
@@ -160,7 +161,7 @@ namespace src_cs {
                             for (int k = 0; k < vertices.Length; k++) {
                                 if (j < k) {
                                     if (routesCache[vertices[j]][vertices[k]] != null) continue;
-                                    var (distance, route) = AStar(vertices[j], vertices[k], null, 0, false);
+                                    var (distance, route) = AStar(vertices[j], vertices[k], cm, 0, false);
                                     routesCache[vertices[j]][vertices[k]] = route;
                                     var reverseRoute = new int[route.Length];
                                     for (int i = 0; i < route.Length; i++) {
@@ -215,51 +216,37 @@ namespace src_cs {
         /// <param name="constraints"></param>
         /// <param name="reverseSearch">Find backwards route if true.</param>
         /// <returns></returns>
-        public (int Length, int[] route) ShortestRoute(int pickVertex, int target, int pickTime, int realTime, SortedList<int, List<int>> constraints,
-            bool reverseSearch, bool returnPath) {
+        public (int Length, int[] route) ShortestRoute(int pickVertex, int target, int pickTime, int realTime, ConstraintManager constraints,
+            bool reverseSearch) {
             (int totalTime, int[] vertices) route = (distancesCache[pickVertex][target] + pickTime, routesCache[pickVertex][target]);
-            int maxTime = reverseSearch ? realTime : realTime + route.totalTime;
+            // int maxTime = reverseSearch ? realTime : realTime + route.totalTime;
             int minTime = reverseSearch ? realTime - route.totalTime : realTime;
 
+            if (minTime < 0)
+                return (0, null);
 
-            if (constraints != null && minTime >= 0) {
-                foreach (var time in constraints.Keys) {
-                    if (time >= minTime && time <= maxTime) {
-                        int relativeTime = time - minTime;
-                        var currConstraints = constraints[time];
-                        for (int i = 0; i < currConstraints.Count; i++) {
-                            // Cannot pick at the vertex
-                            // TODO: Added relative time != 0
-                            if (//relativeTime != 0 && 
-                                relativeTime <= pickTime && pickVertex == currConstraints[i]) {
-                                return (0, null);
-                            }
-                            else if (relativeTime > pickTime && route.vertices[relativeTime - pickTime] == currConstraints[i]) {
-                                if (reverseSearch) {
-                                    route = AStar(pickVertex, target, constraints, realTime, reverseSearch);
-                                }
-                                else {
-                                    route = AStar(pickVertex, target, constraints, realTime + pickTime, reverseSearch);
-                                }
-                                route.totalTime += pickTime;
-                                if (returnPath)
-                                    return route;
-                                else
-                                    return (route.totalTime, null);
-                            }
-                        }
-                    }
+            // Is pick possible?
+            if (pickTime > 0) {
+                if (constraints.IsConstrainedPick(pickVertex, minTime, pickTime))
+                    return (0, null);
+            }
+
+            // Is the path clear?
+            for (int i = 1; i < route.vertices.Length; i++) {
+                if (constraints.IsConstrained(route.vertices[i], minTime + pickTime + i, route.vertices[i - 1])) {
+                    int routeBegin = reverseSearch ? realTime : (realTime + pickTime); 
+                    
+                    route = AStar(pickVertex, target, constraints, routeBegin, reverseSearch);                    
+
+                    route.totalTime += pickTime;                    
+                    return route;                    
                 }
+                    
             }
-            if (!returnPath) {
-                return (route.totalTime, null);
-            }
-            else {
-                return route;
-            }
+            return route;            
         }
 
-        public (int, int[]) AStar(int x, int y, SortedList<int, List<int>> constraints, 
+        public (int, int[]) AStar(int x, int y, ConstraintManager constraints, 
                                   int beginTime, bool reverseSearch=false, int steps = 0) {
             if (reverseSearch) {
                 var tmp = x;
@@ -298,23 +285,17 @@ namespace src_cs {
             ExpandNode:
                 int heuristicCost;
                 int neighborRouteCost = currNode.routeCost + 1;
-                int targetOffsetTime = 0;
-            
+                int constraintTime = reverseSearch == false ? beginTime + neighborRouteCost : beginTime - currRouteCost;
+
                 // Stay at node for another time step, if not constrained
                 //TODO: Only before a blocked vertex?
-                if (constraints != null) {
-                    targetOffsetTime = reverseSearch == false ? beginTime + neighborRouteCost : beginTime - neighborRouteCost;
-                    if (constraints.ContainsKey(targetOffsetTime)) {
-                        foreach (var constraint in constraints[targetOffsetTime]) {
-                            if (constraint == currNode.index)
-                                goto Neighbors;
-                        }
-                    }
+
+
+                if (!constraints.IsConstrained(currNode.index, constraintTime)) {
                     heuristicCost = neighborRouteCost + distancesCache[currNode.index][y];
                     EnqueueNode(currNode.index, neighborRouteCost, heuristicCost, currNode);
                 }
-
-            Neighbors:
+            
                 // Add all neighbors into queue, if edge is not constrained.
                 foreach (var neighbor in vertices[currNode.index].edges) {
                     int neighborIdx = neighbor.x == currNode.index ? neighbor.y : neighbor.x;
@@ -341,19 +322,12 @@ namespace src_cs {
 
                     heuristicCost = neighborRouteCost + distancesCache[neighborIdx][y];
 
-                    // Check if constraints are not violated.                    
-                    if (constraints != null && constraints.ContainsKey(targetOffsetTime)) {
-                        foreach (var constrainedVertexIdx in constraints[targetOffsetTime]) {
-                            if (constrainedVertexIdx == neighborIdx)
-                                goto SkipEnqueue;
-                        }
-                    }
-                    EnqueueNode(neighborIdx, neighborRouteCost, heuristicCost, currNode);
-                SkipEnqueue:
-                    ;
+                    // Check if constraints are not violated.                                        
+                    if ((reverseSearch && !constraints.IsConstrained(currNode.index, constraintTime, neighborIdx))
+                        || (!reverseSearch && !constraints.IsConstrained(neighborIdx, constraintTime, currNode.index)))
+                        EnqueueNode(neighborIdx, neighborRouteCost, heuristicCost, currNode);
                 }
-            }
-            // TODO: Replaced throw exception
+            }            
             return (0, null);
 
             void EnqueueNode(int nodeIndex, int routeCost, int heuristicCost, AStarNode prevNode) {

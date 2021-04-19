@@ -5,12 +5,11 @@ namespace src_cs {
     class SingleAgentPlanner : ConstraintSolver {
 
         public SingleAgentPlanner(WarehouseInstance instance) : base(instance) {
-
+            constraints = new ConstraintManagerDummy();
         }
 
         public override Tour[][] FindTours() {
-            Tour[][] solution;
-            List<Constraint> constraints = new List<Constraint>();
+            Tour[][] solution;            
 
             // Init solution array
             solution = new Tour[agents][];
@@ -32,7 +31,7 @@ namespace src_cs {
         // Resolves all conflicts in a solution to a Multi-agent picker routing problem
         Tour[][] resolveConflicts(Tour[][] tours) {
             Tour[][] solution;
-            SortedList<int, List<int>> constraints = new SortedList<int, List<int>>();
+            constraints = new ConstraintManagerDense();
 
             // Sort orders by their order in input file
             List<(int priority, int agent, int order)> sortedOrders = new List<(int, int, int)>();
@@ -57,23 +56,16 @@ namespace src_cs {
                 int offset = GetOrderOffset(solution, agent, i);
                 solution[agent][i] = resolveConflict(tours[agent][i], offset, constraints);
 
-                // Add new constraints for future orders
-                int time = solution[agent][i].startTime;
-                foreach (var vertex in solution[agent][i]) {
-                    if (constraints.ContainsKey(time))
-                        constraints[time++].Add(vertex);
-                    else
-                        constraints.Add(time++, new List<int> { vertex });
-                }
+                constraints.AddConstraints(solution[agent][i]);
             }
             return solution;
         }
 
         // Plans new paths for one tour, so that it doesn't conflict with previously planned and executed tours.
-        Tour resolveConflict(Tour tour, int tourStartTime, SortedList<int, List<int>> constraints) {
+        Tour resolveConflict(Tour tour, int tourStartTime, ConstraintManager constraints) {
             var g = instance.graph;
             int pathsOffset = 0;
-            int constraintTime = 0;
+            int depot = tour.routes[^1][^1];
             int[][] newRoutes = new int[tour.routes.Length][];
 
             // Initiate the pick list
@@ -94,24 +86,29 @@ namespace src_cs {
                 int pathStartTime = tourStartTime + pathsOffset;
 
                 // Find the shortest possible tour
-                var (pathCost, route) = g.ShortestRoute(pick.startV, pick.pickV, 0, pathStartTime, constraints, false, true);
-                constraintTime = pathStartTime + pathCost;
+                var (pathCost, route) = g.ShortestRoute(pick.startV, pick.pickV, 0, pathStartTime, constraints, false);
+
+                bool firstPickOffset = true;
                 int pickStart = pathStartTime + pathCost;
-                if (!isPickPossible(pick.pickV, pick.pickTime))
-                    pickStart += (constraintTime - pickStart) + nextPickOffset(pick.pickV, constraintTime, pick.pickTime);
+                if (constraints.IsConstrainedPick(pick.pickV, pickStart, pick.pickTime)) {
+                    pickStart += nextPickOffset(pick.pickV, pickStart, pick.pickTime, firstPickOffset);
+                    firstPickOffset = false;
+                }
 
                 while (true) {                    
                     // Does the (delayed) route exist?
                     (pathCost, route) = g.AStar(pick.startV, pick.pickV, constraints, pathStartTime, false, pickStart - pathStartTime);
-                    if (pathCost == 0) {
-                        pickStart += nextPickOffset(pick.pickV, pickStart, pick.pickTime);
+                    if (route == null) {
+                        pickStart += nextPickOffset(pick.pickV, pickStart, pick.pickTime, firstPickOffset);
+                        firstPickOffset = false;
                         continue;
                     }
 
                     // Is it possible to leave the vertex?
-                    var (length, r) = g.AStar(pick.pickV, pick.nextV, constraints, pickStart + pick.pickTime);
+                    var (length, r) = g.AStar(pick.pickV, depot, constraints, pickStart + pick.pickTime);
                     if (r == null) {
-                        pickStart += nextPickOffset(pick.pickV, pickStart, pick.pickTime);
+                        pickStart += nextPickOffset(pick.pickV, pickStart, pick.pickTime, firstPickOffset);
+                        firstPickOffset = false;
                         continue;
                     }
 
@@ -122,50 +119,30 @@ namespace src_cs {
             }
 
             // Find the last path
-            var (t1, r1) = g.ShortestRoute(tour.pickVertices[^1], tour.routes[^1][^1], 0, pathsOffset+tourStartTime, constraints, false, true);
+            var (t1, r1) = g.ShortestRoute(tour.pickVertices[^1], depot, 0, pathsOffset+tourStartTime, constraints, false);
             newRoutes[^1] = r1;
             pathsOffset += t1;
 
-            return new Tour(tourStartTime, pathsOffset+1, tour.pickVertices, tour.pickTimes, newRoutes);
-
-            bool isPickPossible(int pickVertex, int pickDuration) {
-                int maxTime = constraintTime + pickDuration;
-                while (constraintTime < maxTime) {
-                    if (!constraints.ContainsKey(constraintTime)) {
-                        constraintTime++;
-                        continue;
-                    }
-                    else if (constraints[constraintTime].Contains(pickVertex))
-                        return false;
-                    constraintTime++;
-                }            
-                return true;
-            }
+            return new Tour(tourStartTime, pathsOffset+1, tour.pickVertices, tour.pickTimes, newRoutes);            
             
             // Called after failed isPickPossible - there will be a pickVertex constraint at constraintTime,
             // or delayed route doesn't exist, or pick vertex cannot be left
-            int nextPickOffset(int pickVertex, int lastPickTime, int pickDuration) {
-                // Constraint time - current constraint pointer
-                // there is no constraint up to -pickDuration steps
-                int delay = 1;
-
-                if (!constraints.ContainsKey(lastPickTime) || !constraints[lastPickTime].Contains(pickVertex)) {
-                    // Last vertex is not constrained, try +1, else fall back to previous case
-                    if (!constraints.ContainsKey(lastPickTime + delay) || !constraints[lastPickTime + delay].Contains(pickVertex))
+            int nextPickOffset(int pickVertex, int lastPickTime, int pickDuration, bool firstCall) {
+                if (!firstCall) {
+                    if (!constraints.IsConstrained(pickVertex, lastPickTime+pickDuration) && !constraints.IsConstrained(pickVertex, lastPickTime + pickDuration + 1))
                         return 1;
                 }
 
-                delay = 2;
+                int delay = 1;
                 int clearTimeSpan = 0;
 
                 while (true) {
-                    if (!constraints.ContainsKey(lastPickTime + delay + clearTimeSpan) ||
-                        !constraints[lastPickTime + delay + clearTimeSpan].Contains(pickVertex)) {
-                        clearTimeSpan++;
-
+                    if (!constraints.IsConstrained(pickVertex, lastPickTime + delay + clearTimeSpan)) {                        
                         // Pick is possible at time lastPickTime+delay
                         if (clearTimeSpan == pickDuration)
                             return delay;
+                        
+                        clearTimeSpan++;
                     }
                     else {
                         delay += clearTimeSpan + 1;

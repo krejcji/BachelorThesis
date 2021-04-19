@@ -28,9 +28,10 @@ namespace src_cs {
 
     abstract class ConstraintSolver : Solver {
         readonly protected WarehouseInstance instance;
-        readonly protected GTSPSolver solver;
+        readonly protected GTSPSolver solver;        
         readonly protected int maxTime;
         readonly protected int agents;
+        protected ConstraintManager constraints;
         protected List<int>[] nodesVisitors0;
         protected List<int>[] nodesVisitors1;
         

@@ -5,13 +5,13 @@ using System.Collections.Generic;
 namespace src_cs {
     class CBS : ConstraintSolver {
         public CBS(WarehouseInstance instance) : base(instance) {
-
+            constraints = new ConstraintManagerSparse();
         }
 
         public override Tour[][] FindTours() {
             var queue = new FastPriorityQueue<CBSNode>(agents * 15000);
             var root = new CBSNode(instance.orders);
-            root.CalculateInitRoutes(instance.graph, solver);
+            root.CalculateInitRoutes(instance.graph, solver, constraints);
             queue.Enqueue(root, root.cost);
 
             int counter = 0;
@@ -24,15 +24,15 @@ namespace src_cs {
                     solver.PrintStatistic();
                     return currNode.solution;
                 }
-                var constraints = conflict.MakeConstraints();
-                var left = new CBSNode(currNode, constraints.Item1);
-                var right = new CBSNode(currNode, constraints.Item2);
+                var newConstraints = conflict.MakeConstraints();
+                var left = new CBSNode(currNode, newConstraints.Item1);
+                var right = new CBSNode(currNode, newConstraints.Item2);
                 if (left.cost != 0) {
-                    left.UpdateRoutes(instance.graph, solver);
+                    left.UpdateRoutes(instance.graph, solver, constraints);
                     queue.Enqueue(left, left.cost);
                 }
                 if (right.cost != 0) {
-                    right.UpdateRoutes(instance.graph, solver);
+                    right.UpdateRoutes(instance.graph, solver, constraints);
                     queue.Enqueue(right, right.cost);
                 }
                 // TODO: Special constraints & better priority heuristic
@@ -53,7 +53,7 @@ namespace src_cs {
         OrderInstance[][] orders;
         public int cost;
         int agentConstrained;
-        List<Constraint>[] constraints;
+        List<Constraint>[] nodeConstraints;
         // List<Conflict> conflicts;
         public Tour[][] solution;
 
@@ -62,9 +62,9 @@ namespace src_cs {
             this.orders = orders;
 
             // Init empty constraints lists
-            constraints = new List<Constraint>[orders.Length];
-            for (int i = 0; i < constraints.Length; i++) {
-                constraints[i] = new List<Constraint>();
+            nodeConstraints = new List<Constraint>[orders.Length];
+            for (int i = 0; i < nodeConstraints.Length; i++) {
+                nodeConstraints[i] = new List<Constraint>();
             }
 
             // Init tours array
@@ -89,7 +89,7 @@ namespace src_cs {
             }
 
             // Copy old constraints and add new ones.
-            constraints = new List<Constraint>[orders.Length];
+            nodeConstraints = new List<Constraint>[orders.Length];
             agentConstrained = newConstraint[0].agent;
             int tourLength = 0;
             for (int j = 0; j < solution[agentConstrained].Length; j++) {
@@ -102,12 +102,12 @@ namespace src_cs {
 
             for (int i = 0; i < orders.Length; i++) {
                 if (i != agentConstrained) {
-                    this.constraints[i] = pred.constraints[i];
+                    this.nodeConstraints[i] = pred.nodeConstraints[i];
                 }
                 else {
 #if DEBUG
                     int conflicts = 0;
-                    this.constraints[i] = pred.constraints[i];
+                    this.nodeConstraints[i] = pred.nodeConstraints[i];
                     if (newConstraint.Length > 1) {
                         for (int j = 0; j < newConstraint.Length; j++) {
                             for (int k = 0; k < newConstraint.Length; k++) {
@@ -118,10 +118,10 @@ namespace src_cs {
                             }
                         }
                     }
-                    if (constraints[i] != null) {
-                        for (int j = 0; j < constraints[i].Count; j++) {
+                    if (nodeConstraints[i] != null) {
+                        for (int j = 0; j < nodeConstraints[i].Count; j++) {
                             for (int k = 0; k < newConstraint.Length; k++) {
-                                if (constraints[i][j].Equals(newConstraint[k])) {
+                                if (nodeConstraints[i][j].Equals(newConstraint[k])) {
                                     conflicts++;
                                     if (conflicts == newConstraint.Length)
                                         throw new Exception("Adding existing constraint.");
@@ -130,25 +130,26 @@ namespace src_cs {
                         }
                     }
 #endif
-                    this.constraints[i] = new List<Constraint>();
-                    for (int j = 0; j < pred.constraints[i].Count; j++) {
-                        this.constraints[i].Add(pred.constraints[i][j]);
+                    this.nodeConstraints[i] = new List<Constraint>();
+                    for (int j = 0; j < pred.nodeConstraints[i].Count; j++) {
+                        this.nodeConstraints[i].Add(pred.nodeConstraints[i][j]);
                     }
                     for (int j = 0; j < newConstraint.Length; j++) {
-                        this.constraints[i].Add(newConstraint[j]);
+                        this.nodeConstraints[i].Add(newConstraint[j]);
                     }
                 }
             }
         }
 
-        public void UpdateRoutes(Graph graph, GTSPSolver solver) {
+        public void UpdateRoutes(Graph graph, GTSPSolver solver, ConstraintManager constraints) {
             var constrainedSol = solution[agentConstrained];
             int offsetTime = 0;
             for (int i = 0; i < constrainedSol.Length; i++) {
                 if (i > 0)
                     offsetTime += constrainedSol[i - 1].Distance;
                 constrainedSol[i].startTime = offsetTime;
-                constrainedSol[i] = solver.SolveGTSP(graph, constraints[agentConstrained], orders[agentConstrained][i], offsetTime);
+                constraints.InitConstraints(nodeConstraints[agentConstrained]);
+                constrainedSol[i] = solver.SolveGTSP(graph, constraints, orders[agentConstrained][i], offsetTime);
             }
 
             // Calculate solution cost as a sum of costs of tours
@@ -160,19 +161,20 @@ namespace src_cs {
 
             // Sum constraints count as a tie breaking heristic for CBS
             int constr = 0;
-            for (int i = 0; i < constraints.Length; i++) {
-                constr += constraints[i].Count;
+            for (int i = 0; i < nodeConstraints.Length; i++) {
+                constr += nodeConstraints[i].Count;
             }
             this.cost = (cost << 10) + constr;
         }
 
-        public void CalculateInitRoutes(Graph graph, GTSPSolver solver) {
+        public void CalculateInitRoutes(Graph graph, GTSPSolver solver, ConstraintManager constraints) {
             int offsetTime = 0;
             for (int i = 0; i < solution.Length; i++) {
                 for (int j = 0; j < solution[i].Length; j++) {
                     if (j > 0)
                         offsetTime += solution[i][j - 1].Distance;
-                    solution[i][j] = solver.SolveGTSP(graph, constraints[i], orders[i][j], offsetTime);
+                    constraints.InitConstraints(nodeConstraints[i]);
+                    solution[i][j] = solver.SolveGTSP(graph, constraints, orders[i][j], offsetTime);
                     this.cost += solution[i][j].Length;
                 }
                 offsetTime = 0;

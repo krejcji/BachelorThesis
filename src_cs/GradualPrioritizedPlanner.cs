@@ -4,17 +4,14 @@ using System.Text;
 
 namespace src_cs {
     class GradualPrioritizedPlanner : PrioritizedPlanner {
-        public GradualPrioritizedPlanner(WarehouseInstance instance) : base(instance, Heuristic.Default) {
-            
+        public GradualPrioritizedPlanner(WarehouseInstance instance) : base(instance, Heuristic.Default) {            
         }
 
-        public GradualPrioritizedPlanner(WarehouseInstance instance, Heuristic h) : base(instance, h) {
-
+        public GradualPrioritizedPlanner(WarehouseInstance instance, Heuristic h) : base(instance, h) {            
         }
 
         public override Tour[][] FindTours() {
-            Tour[][] solution;
-            List<Constraint> constraints = new List<Constraint>();
+            Tour[][] solution;            
 
             // Init tours array
             solution = new Tour[agents][];
@@ -26,7 +23,7 @@ namespace src_cs {
 
             // Calculate the non-conflicting routes based on a heuristic
             foreach (var (tour, agent) in heuristicEnum) {
-                constraints.Clear();
+                constraints = new ConstraintManagerSparse();
                 int offsetTime = GetOrderOffset(solution, agent, tour);
 
                 while (true) {
@@ -36,7 +33,7 @@ namespace src_cs {
                         var conf = c.MakeConstraints();
                         var constraint = conf.Item1[0].agent == agent ? conf.Item1 : conf.Item2;
                         for (int k = 0; k < conf.Item1.Length; k++) {
-                            constraints.Add(constraint[k]);
+                            constraints.AddConstraint(constraint[k]);
                         }
                     }
                     else
