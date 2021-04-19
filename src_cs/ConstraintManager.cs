@@ -47,7 +47,7 @@ namespace src_cs {
         public abstract bool IsConstrained(int vertex, int time, int predecessor = -1);
         public abstract bool IsConstrainedPick(int vertex, int time, int pickDuration);
 
-        public abstract bool IsConstrainedRoute(int pickVertex, int target, int pickDuration);
+        public abstract bool? IsConstrainedRoute(int pickVertex, int target, int pickDuration, int realTime, (int time, int[] vertices) route);
 
         public abstract void AddConstraint(int vertex, int time, int predecessor);
         public abstract void AddConstraint(Constraint constraint);
@@ -133,8 +133,37 @@ namespace src_cs {
             return false;
         }
 
-        public override bool IsConstrainedRoute(int pickVertex, int target, int pickDuration) {
-            throw new NotImplementedException();
+        public override bool? IsConstrainedRoute(int pickVertex, int target, int pickDuration, int minTime, (int time, int[] vertices) route) {
+            int maxTime = minTime + route.time;
+
+            // TODO: Allow the first constraint to be found with binary search
+            foreach (var constraint in constraints) {
+                var time = constraint.Key;
+                
+                if (time <= minTime)
+                    continue;                
+                else if (time > maxTime)
+                    return false;
+                // Is pick possible?
+                else if (time <= minTime + pickDuration) {
+                    var constList = constraint.Value;
+                    foreach (var constr in constList) {
+                        if (constr.vertex == pickVertex)
+                            return null;
+                    }
+                }
+                // Is route free?
+                else {
+                    int offset = time - (minTime + pickDuration);
+                    var constList = constraint.Value;                    
+                    foreach (var constr in constList) {
+                        if (route.vertices[offset] == constr.vertex ||
+                            (constr.predecessor != -1 && constr == (route.vertices[offset - 1], route.vertices[offset])))
+                            return true;                        
+                    }
+                }
+            }
+            return false;
         }
 
         public override int Count {
@@ -219,8 +248,19 @@ namespace src_cs {
             constraints.Clear();
         }
 
-        public override bool IsConstrainedRoute(int pickVertex, int target, int pickDuration) {
-            throw new NotImplementedException();
+        public override bool? IsConstrainedRoute(int pickVertex, int target, int pickDuration, int realTime, (int time, int[] vertices) route) {
+            // Is pick possible?
+            if (pickDuration > 0) {
+                if (IsConstrainedPick(pickVertex, realTime, pickDuration))
+                    return null;
+            }
+
+            // Is the path clear?
+            for (int i = 1; i < route.vertices.Length; i++) {
+                if (IsConstrained(route.vertices[i], realTime + pickDuration + i, route.vertices[i - 1]))
+                    return true;                
+            }
+            return false;
         }
 
         public override int Count {
@@ -277,8 +317,8 @@ namespace src_cs {
             return false;
         }
 
-        public override bool IsConstrainedRoute(int pickVertex, int target, int pickDuration) {
-            throw new NotImplementedException();
+        public override bool? IsConstrainedRoute(int pickVertex, int target, int pickDuration, int realTime, (int, int[]) route) {
+            return false;
         }
     }
 

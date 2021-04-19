@@ -219,30 +219,25 @@ namespace src_cs {
         public (int Length, int[] route) ShortestRoute(int pickVertex, int target, int pickTime, int realTime, ConstraintManager constraints,
             bool reverseSearch) {
             (int totalTime, int[] vertices) route = (distancesCache[pickVertex][target] + pickTime, routesCache[pickVertex][target]);
-            // int maxTime = reverseSearch ? realTime : realTime + route.totalTime;
+            // int maxTime = reverseSearch ? realTime : realTime + route.totalTime;            
             int minTime = reverseSearch ? realTime - route.totalTime : realTime;
 
             if (minTime < 0)
                 return (0, null);
 
-            // Is pick possible?
-            if (pickTime > 0) {
-                if (constraints.IsConstrainedPick(pickVertex, minTime, pickTime))
-                    return (0, null);
+            bool? isConstrained = constraints.IsConstrainedRoute(pickVertex, target, pickTime, minTime, route);
+            if (isConstrained == null) {
+                return (0, null);
+            } else if (isConstrained == true) {
+                int routeBegin = reverseSearch ? realTime : (realTime + pickTime);
+
+                route = AStar(pickVertex, target, constraints, routeBegin, reverseSearch);
+
+                route.totalTime += pickTime;
+                return route;
+
             }
 
-            // Is the path clear?
-            for (int i = 1; i < route.vertices.Length; i++) {
-                if (constraints.IsConstrained(route.vertices[i], minTime + pickTime + i, route.vertices[i - 1])) {
-                    int routeBegin = reverseSearch ? realTime : (realTime + pickTime); 
-                    
-                    route = AStar(pickVertex, target, constraints, routeBegin, reverseSearch);                    
-
-                    route.totalTime += pickTime;                    
-                    return route;                    
-                }
-                    
-            }
             return route;            
         }
 
